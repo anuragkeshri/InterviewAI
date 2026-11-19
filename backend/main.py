@@ -15,7 +15,7 @@ import models
 from sqlalchemy import select
 from fastapi import Depends
 from sqlalchemy.orm import Session
-
+from sqlalchemy import func, select
 from database import SessionLocal
 from models import InterviewAttempt
 
@@ -386,3 +386,41 @@ def get_attempts(db: Session = Depends(get_db)):
             for attempt in attempts
         ]
     }
+
+@app.get("/dashboard/stats")
+def get_dashboard_stats(db: Session = Depends(get_db)):
+
+    total_attempts = db.scalar(
+        select(func.count(InterviewAttempt.id))
+    ) or 0
+
+    average_score = db.scalar(
+        select(func.avg(InterviewAttempt.score))
+    ) or 0
+
+    best_score = db.scalar(
+        select(func.max(InterviewAttempt.score))
+    ) or 0
+
+    return {
+        "totalAttempts": total_attempts,
+        "averageScore": round(float(average_score), 1),
+        "bestScore": best_score
+    }
+
+@app.get("/dashboard/performance")
+def get_performance(db: Session = Depends(get_db)):
+    attempts = db.scalars(
+        select(InterviewAttempt).order_by(
+            InterviewAttempt.created_at.asc(),
+            InterviewAttempt.id.asc()
+        )
+    ).all()
+
+    return [
+        {
+            "attempt": index,
+            "score": attempt.score,
+        }
+        for index, attempt in enumerate(attempts, start=1)
+    ]

@@ -1,100 +1,53 @@
 
-// import { FileQuestion, Users, TrendingUp } from 'lucide-react'
-
-// function StatsCards() {
-//   const stats = [
-//     {
-//       title: 'Questions Generated',
-//       value: '0',
-//       icon: FileQuestion,
-//       color: 'bg-indigo-100 text-indigo-600',
-//     },
-//     {
-//       title: 'Interview Sessions',
-//       value: '0',
-//       icon: Users,
-//       color: 'bg-blue-100 text-blue-600',
-//     },
-//     {
-//       title: 'AI Success Rate',
-//       value: '—',
-//       icon: TrendingUp,
-//       color: 'bg-emerald-100 text-emerald-600',
-//     },
-//   ]
-
-//   return (
-//     <div className="grid grid-cols-1 gap-6 md:grid-cols-3 mt-2">
-//       {stats.map((stat) => {
-//         const Icon = stat.icon
-
-//         return (
-//           <div
-//             key={stat.title}
-//             className="rounded-2xl border-3 border-double border-blue-300 bg-white p-6 shadow-sm"
-//           >
-//             <div className={`mb-5 flex h-12 w-12 items-center justify-center rounded-xl ${stat.color}`}>
-//               <Icon size={23} />
-//             </div>
-
-//             <p className="text-sm text-slate-500">
-//               {stat.title}
-//             </p>
-
-//             <h3 className="mt-2 text-3xl font-bold text-slate-900">
-//               {stat.value}
-//             </h3>
-//           </div>
-//         )
-//       })}
-//     </div>
-//   )
-// }
-
-// export default StatsCards
-
-
-
 import {
   FileQuestion,
-  Users,
   TrendingUp,
+  Trophy,
   ArrowUpRight,
-} from 'lucide-react'
+} from "lucide-react";
 
-const stats = [
-  {
-    title: 'Questions Generated',
-    value: '0',
-    icon: FileQuestion,
-    iconColor: 'text-indigo-400',
-    iconBg: 'bg-indigo-500/10',
-    description: 'Total questions created',
-  },
-  {
-    title: 'Interview Sessions',
-    value: '0',
-    icon: Users,
-    iconColor: 'text-cyan-400',
-    iconBg: 'bg-cyan-500/10',
-    description: 'Sessions conducted',
-  },
-  {
-    title: 'AI Success Rate',
-    value: '—',
-    icon: TrendingUp,
-    iconColor: 'text-emerald-400',
-    iconBg: 'bg-emerald-500/10',
-    description: 'Available after generation',
-  },
-]
+type DashboardStats = {
+  totalAttempts: number;
+  averageScore: number;
+  bestScore: number;
+};
 
-function StatsCards() {
+type StatsCardsProps = {
+  stats: DashboardStats;
+};
+
+function StatsCards({ stats }: StatsCardsProps) {
+  const statsData = [
+    {
+      title: "Answers Evaluated",
+      value: stats.totalAttempts,
+      icon: FileQuestion,
+      iconColor: "text-indigo-400",
+      iconBg: "bg-indigo-500/10",
+      description: "Total evaluated answers",
+    },
+    {
+      title: "Average Score",
+      value: `${stats.averageScore}/10`,
+      icon: TrendingUp,
+      iconColor: "text-cyan-400",
+      iconBg: "bg-cyan-500/10",
+      description: "Average interview performance",
+    },
+    {
+      title: "Best Score",
+      value: `${stats.bestScore}/10`,
+      icon: Trophy,
+      iconColor: "text-emerald-400",
+      iconBg: "bg-emerald-500/10",
+      description: "Highest evaluation score",
+    },
+  ];
+
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-
-      {stats.map((stat) => {
-        const Icon = stat.icon
+      {statsData.map((stat) => {
+        const Icon = stat.icon;
 
         return (
           <div
@@ -105,8 +58,9 @@ function StatsCards() {
             <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-indigo-500/5 blur-3xl" />
 
             <div className="relative flex items-start justify-between">
-
-              <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.iconBg}`}>
+              <div
+                className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.iconBg}`}
+              >
                 <Icon size={23} className={stat.iconColor} />
               </div>
 
@@ -129,13 +83,11 @@ function StatsCards() {
                 {stat.description}
               </p>
             </div>
-
           </div>
-        )
+        );
       })}
-
     </div>
-  )
+  );
 }
 
-export default StatsCards
+export default StatsCards;
