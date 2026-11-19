@@ -126,7 +126,14 @@ function QuestionGenerator() {
 
       console.log("Backend Response:", data);
 
+      // if (
+      //   !Array.isArray(data.questions) ||
+      //   !data.questions.every((question) => typeof question === "string")
+      // ) {
+      //   throw new Error("Invalid questions received from server");
+      // }
       if (
+        !data ||
         !Array.isArray(data.questions) ||
         !data.questions.every((question) => typeof question === "string")
       ) {
@@ -357,7 +364,11 @@ function QuestionGenerator() {
 
       {showResults && (
         <div className="mt-8">
-          <GeneratedQuestions questions={questions} />
+       <GeneratedQuestions
+  questions={questions}
+  jobRole={formData.jobRole}
+  experience={formData.experience}
+/>
         </div>
       )}
     </>
