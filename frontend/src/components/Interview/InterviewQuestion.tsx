@@ -1,3 +1,6 @@
+
+
+
 import { useState } from "react";
 import {
   ArrowLeft,
@@ -34,6 +37,9 @@ type InterviewQuestionProps = {
   savedResult?: QuestionResult;
   onAnswerSaved: (result: QuestionResult) => void;
   onFinish: () => void;
+  isFinishing?: boolean;
+  sessionId: number;
+
 };
 
 const API_URL = "http://127.0.0.1:8000";
@@ -51,11 +57,17 @@ export default function InterviewQuestion({
   savedResult,
   onAnswerSaved,
   onFinish,
+  isFinishing = false,
+  sessionId,
 }: InterviewQuestionProps) {
-  const [answer, setAnswer] = useState(savedResult?.answer ?? "");
-  const [evaluation, setEvaluation] = useState<Evaluation | null>(
-    savedResult?.evaluation ?? null,
+  const [answer, setAnswer] = useState(
+    savedResult?.answer ?? ""
   );
+
+  const [evaluation, setEvaluation] = useState<Evaluation | null>(
+    savedResult?.evaluation ?? null
+  );
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -67,39 +79,48 @@ export default function InterviewQuestion({
 
     try {
       // Step 1: Evaluate answer using Gemini
-      const evaluateResponse = await fetch(`${API_URL}/evaluate-answer`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          question,
-          answer: answer.trim(),
-          jobRole,
-          experience,
-        }),
-      });
+      const evaluateResponse = await fetch(
+        `${API_URL}/evaluate-answer`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            sessionId,
+            question,
+            answer: answer.trim(),
+            jobRole,
+            experience,
+          }),
+        }
+      );
 
       if (!evaluateResponse.ok) {
         throw new Error("AI evaluation failed");
       }
 
-      const result: Evaluation = await evaluateResponse.json();
+      const result: Evaluation =
+        await evaluateResponse.json();
 
       // Step 2: Save evaluation to SQLite
-      const saveResponse = await fetch(`${API_URL}/save-attempt`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          question,
-          answer: answer.trim(),
-          jobRole,
-          experience,
-          ...result,
-        }),
-      });
+      const saveResponse = await fetch(
+        `${API_URL}/save-attempt`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            sessionId,
+            question,
+            answer: answer.trim(),
+            jobRole,
+            experience,
+            ...result,
+          }),
+        }
+      );
 
       if (!saveResponse.ok) {
         throw new Error("Failed to save interview attempt");
@@ -112,7 +133,11 @@ export default function InterviewQuestion({
         evaluation: result,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong"
+      );
     } finally {
       setLoading(false);
     }
@@ -120,6 +145,7 @@ export default function InterviewQuestion({
 
   return (
     <div className="rounded-2xl border border-white/10 bg-[#111A2E] p-6 md:p-8">
+      {/* Question Header */}
       <div className="mb-6 flex items-center justify-between">
         <span className="text-sm font-semibold text-indigo-400">
           Question {questionNumber} of {totalQuestions}
@@ -149,12 +175,13 @@ export default function InterviewQuestion({
         id="interview-answer"
         value={answer}
         onChange={(e) => setAnswer(e.target.value)}
-        disabled={loading || !!evaluation}
+        disabled={loading || isFinishing || !!evaluation}
         placeholder="Write your interview answer here..."
         rows={6}
         className="w-full resize-y rounded-xl border border-white/10 bg-[#080D1B] p-4 text-sm leading-7 text-white outline-none placeholder:text-slate-500 focus:border-indigo-500 disabled:opacity-70"
       />
 
+      {/* Error */}
       {error && (
         <div
           role="alert"
@@ -170,12 +197,17 @@ export default function InterviewQuestion({
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={loading || !answer.trim()}
+          disabled={
+            loading || isFinishing || !answer.trim()
+          }
           className="mt-5 flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? (
             <>
-              <Loader2 size={18} className="animate-spin" />
+              <Loader2
+                size={18}
+                className="animate-spin"
+              />
               Evaluating Answer...
             </>
           ) : (
@@ -191,7 +223,9 @@ export default function InterviewQuestion({
       {evaluation && (
         <div className="mt-8 space-y-5 border-t border-white/10 pt-7">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-white">AI Evaluation</h3>
+            <h3 className="text-lg font-semibold text-white">
+              AI Evaluation
+            </h3>
 
             <span className="rounded-xl bg-indigo-500/15 px-4 py-2 text-xl font-bold text-indigo-400">
               {evaluation.score}/10
@@ -199,7 +233,9 @@ export default function InterviewQuestion({
           </div>
 
           <div className="rounded-xl border border-white/10 bg-[#080D1B] p-5">
-            <h4 className="mb-2 font-semibold text-white">Feedback</h4>
+            <h4 className="mb-2 font-semibold text-white">
+              Feedback
+            </h4>
             <p className="text-sm leading-7 text-slate-300">
               {evaluation.feedback}
             </p>
@@ -207,11 +243,15 @@ export default function InterviewQuestion({
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-5">
-              <h4 className="mb-3 font-semibold text-emerald-400">Strengths</h4>
+              <h4 className="mb-3 font-semibold text-emerald-400">
+                Strengths
+              </h4>
               <ul className="space-y-2 text-sm text-slate-300">
-                {evaluation.strengths.map((item, index) => (
-                  <li key={index}>• {item}</li>
-                ))}
+                {evaluation.strengths.map(
+                  (item, index) => (
+                    <li key={index}>• {item}</li>
+                  )
+                )}
               </ul>
             </div>
 
@@ -220,9 +260,11 @@ export default function InterviewQuestion({
                 Missing Points
               </h4>
               <ul className="space-y-2 text-sm text-slate-300">
-                {evaluation.missingPoints.map((item, index) => (
-                  <li key={index}>• {item}</li>
-                ))}
+                {evaluation.missingPoints.map(
+                  (item, index) => (
+                    <li key={index}>• {item}</li>
+                  )
+                )}
               </ul>
             </div>
           </div>
@@ -243,7 +285,7 @@ export default function InterviewQuestion({
         <button
           type="button"
           onClick={onPrevious}
-          disabled={isFirst || loading}
+          disabled={isFirst || loading || isFinishing}
           className="flex items-center gap-2 rounded-xl border border-white/10 px-5 py-3 text-sm text-slate-300 disabled:opacity-40"
         >
           <ArrowLeft size={17} />
@@ -253,11 +295,27 @@ export default function InterviewQuestion({
         <button
           type="button"
           onClick={isLast ? onFinish : onNext}
-          disabled={loading || !evaluation}
-          className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40"
+          disabled={
+            loading || isFinishing || !evaluation
+          }
+          className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {isLast ? "Finish Interview" : "Next Question"}
-          <ArrowRight size={17} />
+          {isFinishing ? (
+            <>
+              <Loader2
+                size={17}
+                className="animate-spin"
+              />
+              Saving Interview...
+            </>
+          ) : (
+            <>
+              {isLast
+                ? "Finish Interview"
+                : "Next Question"}
+              <ArrowRight size={17} />
+            </>
+          )}
         </button>
       </div>
     </div>

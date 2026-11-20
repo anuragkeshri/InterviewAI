@@ -1,4 +1,8 @@
-// import { useEffect, useState } from "react";
+
+
+
+
+// import { useEffect, useMemo, useState } from "react";
 // import {
 //   History,
 //   Database,
@@ -6,7 +10,12 @@
 //   ChartNoAxesColumn,
 //   Trophy,
 //   ChevronDown,
-// ChevronUp,
+//   ChevronUp,
+//   Search,
+//   Filter,
+//   RotateCcw,
+//   ChevronLeft,
+//   ChevronRight,
 // } from "lucide-react";
 
 // import Sidebar from "../components/Sidebar";
@@ -17,55 +26,79 @@
 //   InterviewHistoryResponse,
 // } from "../types/interview";
 
+// const PAGE_SIZE = 5;
+
+// type ScoreFilter = "all" | "high" | "medium" | "low";
+
 // export default function InterviewHistory() {
 //   const [attempts, setAttempts] = useState<InterviewAttempt[]>([]);
 //   const [loading, setLoading] = useState(true);
 //   const [error, setError] = useState("");
-// const [expandedAttemptId, setExpandedAttemptId] =
-//   useState<number | null>(null);
-//   // Fetch saved interview attempts
+
+//   const [expandedAttemptId, setExpandedAttemptId] =
+//     useState<number | null>(null);
+
+//   // Day 84 - Search, Filter and Pagination
+//   const [searchQuery, setSearchQuery] = useState("");
+//   const [selectedRole, setSelectedRole] = useState("all");
+//   const [scoreFilter, setScoreFilter] =
+//     useState<ScoreFilter>("all");
+//   const [currentPage, setCurrentPage] = useState(1);
+
+//   // Fetch interview history
 //   useEffect(() => {
 //     const controller = new AbortController();
 
-//     const fetchAttempts = async () => {
+//     async function fetchAttempts() {
 //       try {
 //         setLoading(true);
 //         setError("");
 
-//         const response = await fetch("http://127.0.0.1:8000/attempts", {
-//           signal: controller.signal,
-//         });
+//         const response = await fetch(
+//           "http://127.0.0.1:8000/attempts",
+//           { signal: controller.signal }
+//         );
 
 //         if (!response.ok) {
 //           throw new Error("Failed to fetch interview history");
 //         }
 
-//         const data: InterviewHistoryResponse = await response.json();
+//         const result: InterviewHistoryResponse =
+//           await response.json();
 
-//         setAttempts(data.attempts);
+//         if (!controller.signal.aborted) {
+//           setAttempts(result.attempts);
+//         }
 //       } catch (err) {
-//         if (controller.signal.aborted) return;
-
-//         setError(err instanceof Error ? err.message : "Something went wrong");
+//         if (!controller.signal.aborted) {
+//           setError(
+//             err instanceof Error
+//               ? err.message
+//               : "Something went wrong"
+//           );
+//         }
 //       } finally {
 //         if (!controller.signal.aborted) {
 //           setLoading(false);
 //         }
 //       }
-//     };
+//     }
 
 //     fetchAttempts();
 
 //     return () => controller.abort();
 //   }, []);
 
+//   // Overall statistics
 //   const totalAttempts = attempts.length;
 
 //   const averageScore =
 //     totalAttempts > 0
 //       ? (
-//           attempts.reduce((sum, attempt) => sum + attempt.score, 0) /
-//           totalAttempts
+//           attempts.reduce(
+//             (sum, attempt) => sum + attempt.score,
+//             0
+//           ) / totalAttempts
 //         ).toFixed(1)
 //       : "0.0";
 
@@ -73,6 +106,77 @@
 //     totalAttempts > 0
 //       ? Math.max(...attempts.map((attempt) => attempt.score))
 //       : 0;
+
+//   // Unique job roles from API data
+//   const jobRoles = useMemo(() => {
+//     return [...new Set(attempts.map((a) => a.jobRole))]
+//       .filter(Boolean)
+//       .sort((a, b) => a.localeCompare(b));
+//   }, [attempts]);
+
+//   // Search and combined filters
+//   const filteredAttempts = useMemo(() => {
+//     const query = searchQuery.trim().toLowerCase();
+
+//     return attempts.filter((attempt) => {
+//       const matchesSearch =
+//         attempt.question.toLowerCase().includes(query);
+
+//       const matchesRole =
+//         selectedRole === "all" ||
+//         attempt.jobRole === selectedRole;
+
+//       let matchesScore = true;
+
+//       if (scoreFilter === "high") {
+//         matchesScore = attempt.score >= 8;
+//       } else if (scoreFilter === "medium") {
+//         matchesScore =
+//           attempt.score >= 5 && attempt.score < 8;
+//       } else if (scoreFilter === "low") {
+//         matchesScore = attempt.score < 5;
+//       }
+
+//       return matchesSearch && matchesRole && matchesScore;
+//     });
+//   }, [attempts, searchQuery, selectedRole, scoreFilter]);
+
+//   // Pagination
+//   const totalPages = Math.max(
+//     1,
+//     Math.ceil(filteredAttempts.length / PAGE_SIZE)
+//   );
+
+//   const safePage = Math.min(currentPage, totalPages);
+
+//   const startIndex = (safePage - 1) * PAGE_SIZE;
+
+//   const paginatedAttempts = filteredAttempts.slice(
+//     startIndex,
+//     startIndex + PAGE_SIZE
+//   );
+
+//   const hasActiveFilters =
+//     searchQuery.trim() !== "" ||
+//     selectedRole !== "all" ||
+//     scoreFilter !== "all";
+
+//   function resetPagination() {
+//     setCurrentPage(1);
+//     setExpandedAttemptId(null);
+//   }
+
+//   function resetFilters() {
+//     setSearchQuery("");
+//     setSelectedRole("all");
+//     setScoreFilter("all");
+//     resetPagination();
+//   }
+
+//   function changePage(page: number) {
+//     setCurrentPage(page);
+//     setExpandedAttemptId(null);
+//   }
 
 //   return (
 //     <div className="min-h-screen bg-[#080D1B] text-white">
@@ -85,265 +189,528 @@
 //           <main className="mx-auto max-w-7xl px-6 py-8">
 //             {/* Page Heading */}
 //             <div className="mb-8">
-//               <div className="mb-3 flex items-center gap-3">
+//               <div className="flex items-center gap-3">
 //                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-400">
 //                   <History size={24} />
 //                 </div>
 
 //                 <div>
-//                   <h1 className="text-3xl font-bold">Interview History</h1>
+//                   <h1 className="text-3xl font-bold">
+//                     Interview History
+//                   </h1>
 
 //                   <p className="mt-1 text-sm text-slate-400">
-//                     Track your interview attempts and AI evaluation scores.
+//                     Track your interview attempts and AI
+//                     evaluation scores.
 //                   </p>
 //                 </div>
 //               </div>
 //             </div>
 
-//             {/* History Statistics */}
+//             {/* Statistics */}
 //             <div className="mb-8 grid grid-cols-1 gap-5 md:grid-cols-3">
-//               {/* Total Attempts */}
 //               <div className="rounded-2xl border border-white/10 bg-[#111A2E] p-6">
 //                 <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-violet-500/10">
-//                   <ClipboardList size={22} className="text-violet-400" />
+//                   <ClipboardList
+//                     size={22}
+//                     className="text-violet-400"
+//                   />
 //                 </div>
 
-//                 <p className="text-sm text-slate-400">Total Attempts</p>
-//                 <h2 className="mt-2 text-3xl font-bold text-white">
+//                 <p className="text-sm text-slate-400">
+//                   Total Attempts
+//                 </p>
+
+//                 <h2 className="mt-2 text-3xl font-bold">
 //                   {totalAttempts}
 //                 </h2>
 //               </div>
 
-//               {/* Average Score */}
 //               <div className="rounded-2xl border border-white/10 bg-[#111A2E] p-6">
 //                 <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-sky-500/10">
-//                   <ChartNoAxesColumn size={22} className="text-sky-400" />
+//                   <ChartNoAxesColumn
+//                     size={22}
+//                     className="text-sky-400"
+//                   />
 //                 </div>
 
-//                 <p className="text-sm text-slate-400">Average Score</p>
-//                 <h2 className="mt-2 text-3xl font-bold text-white">
+//                 <p className="text-sm text-slate-400">
+//                   Average Score
+//                 </p>
+
+//                 <h2 className="mt-2 text-3xl font-bold">
 //                   {averageScore}
-//                   <span className="text-lg text-slate-500">/10</span>
+//                   <span className="text-lg text-slate-500">
+//                     /10
+//                   </span>
 //                 </h2>
 //               </div>
 
-//               {/* Best Score */}
 //               <div className="rounded-2xl border border-white/10 bg-[#111A2E] p-6">
 //                 <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10">
-//                   <Trophy size={22} className="text-emerald-400" />
+//                   <Trophy
+//                     size={22}
+//                     className="text-emerald-400"
+//                   />
 //                 </div>
 
-//                 <p className="text-sm text-slate-400">Best Score</p>
-//                 <h2 className="mt-2 text-3xl font-bold text-white">
+//                 <p className="text-sm text-slate-400">
+//                   Best Score
+//                 </p>
+
+//                 <h2 className="mt-2 text-3xl font-bold">
 //                   {bestScore}
-//                   <span className="text-lg text-slate-500">/10</span>
+//                   <span className="text-lg text-slate-500">
+//                     /10
+//                   </span>
 //                 </h2>
 //               </div>
 //             </div>
 
-//             {/* Empty State */}
-//             {!loading && !error && attempts.length === 0 && (
-//               <div className="flex min-h-80 flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#111A2E] p-8 text-center">
-//                 <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-500/10">
-//                   <Database size={30} className="text-indigo-400" />
-//                 </div>
-
-//                 <h2 className="text-xl font-semibold">
-//                   No Interview Attempts Yet
-//                 </h2>
-
-//                 <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">
-//                   Your saved interview attempts, scores and AI feedback will
-//                   appear here.
-//                 </p>
-//               </div>
-//             )}
-
-//             {/* Interview History Cards */}
+//             {/* History Container */}
 //             <div className="rounded-2xl border border-white/10 bg-[#111A2E] p-6">
-//               <div className="mb-6 flex items-center justify-between">
+//               {/* Section Header */}
+//               <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
 //                 <div>
-//                   <h2 className="text-xl font-semibold text-white">
+//                   <h2 className="text-xl font-semibold">
 //                     Recent Attempts
 //                   </h2>
+
 //                   <p className="mt-1 text-sm text-slate-400">
 //                     Review your previous interview evaluations.
 //                   </p>
 //                 </div>
 
 //                 <span className="rounded-lg bg-indigo-500/15 px-3 py-1.5 text-sm text-indigo-300">
-//                   {attempts.length} Attempts
+//                   {totalAttempts} Attempts
 //                 </span>
 //               </div>
 
-//               {/* Loading */}
-//               {loading && (
-//                 <p className="py-10 text-center text-slate-400">
-//                   Loading interview history...
-//                 </p>
+//               {/* Search and Filters */}
+//               {!loading && !error && totalAttempts > 0 && (
+//                 <div className="mb-7 space-y-4">
+//                   <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+//                     {/* Search */}
+//                     <div className="relative">
+//                       <Search
+//                         size={18}
+//                         className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+//                       />
+
+//                       <input
+//                         type="text"
+//                         value={searchQuery}
+//                         onChange={(e) => {
+//                           setSearchQuery(e.target.value);
+//                           resetPagination();
+//                         }}
+//                         placeholder="Search interview questions..."
+//                         aria-label="Search interview questions"
+//                         className="w-full rounded-xl border border-white/10 bg-[#080D1B] py-3 pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-indigo-500"
+//                       />
+//                     </div>
+
+//                     {/* Job Role */}
+//                     <div className="relative">
+//                       <Filter
+//                         size={17}
+//                         className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+//                       />
+
+//                       <select
+//                         value={selectedRole}
+//                         onChange={(e) => {
+//                           setSelectedRole(e.target.value);
+//                           resetPagination();
+//                         }}
+//                         aria-label="Filter by job role"
+//                         className="w-full appearance-none rounded-xl border border-white/10 bg-[#080D1B] py-3 pl-11 pr-9 text-sm text-white outline-none focus:border-indigo-500"
+//                       >
+//                         <option value="all">All Job Roles</option>
+
+//                         {jobRoles.map((role) => (
+//                           <option key={role} value={role}>
+//                             {role}
+//                           </option>
+//                         ))}
+//                       </select>
+
+//                       <ChevronDown
+//                         size={16}
+//                         className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+//                       />
+//                     </div>
+
+//                     {/* Score Filter */}
+//                     <div className="relative">
+//                       <select
+//                         value={scoreFilter}
+//                         onChange={(e) => {
+//                           setScoreFilter(
+//                             e.target.value as ScoreFilter
+//                           );
+//                           resetPagination();
+//                         }}
+//                         aria-label="Filter by evaluation score"
+//                         className="w-full appearance-none rounded-xl border border-white/10 bg-[#080D1B] px-4 py-3 pr-9 text-sm text-white outline-none focus:border-indigo-500"
+//                       >
+//                         <option value="all">All Scores</option>
+//                         <option value="high">
+//                           High Score (8–10)
+//                         </option>
+//                         <option value="medium">
+//                           Medium Score (5–7.9)
+//                         </option>
+//                         <option value="low">
+//                           Low Score (Below 5)
+//                         </option>
+//                       </select>
+
+//                       <ChevronDown
+//                         size={16}
+//                         className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+//                       />
+//                     </div>
+//                   </div>
+
+//                   {/* Results and Reset */}
+//                   <div className="flex flex-wrap items-center justify-between gap-3">
+//                     <p className="text-sm text-slate-400">
+//                       Showing{" "}
+//                       <span className="font-semibold text-indigo-300">
+//                         {filteredAttempts.length}
+//                       </span>{" "}
+//                       of {totalAttempts} attempts
+//                     </p>
+
+//                     {hasActiveFilters && (
+//                       <button
+//                         type="button"
+//                         onClick={resetFilters}
+//                         className="flex items-center gap-2 text-sm text-slate-400 transition hover:text-white"
+//                       >
+//                         <RotateCcw size={15} />
+//                         Reset Filters
+//                       </button>
+//                     )}
+//                   </div>
+//                 </div>
 //               )}
 
-//               {/* Error */}
+//               {/* Loading */}
+//               {loading && (
+//                 <div className="flex min-h-60 flex-col items-center justify-center gap-4">
+//                   <div className="h-9 w-9 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+
+//                   <p className="text-sm text-slate-400">
+//                     Loading interview history...
+//                   </p>
+//                 </div>
+//               )}
+
+//               {/* API Error */}
 //               {!loading && error && (
-//                 <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-400">
+//                 <div
+//                   role="alert"
+//                   className="rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-400"
+//                 >
 //                   {error}
 //                 </div>
 //               )}
 
-//               {/* History List */}
-//               {!loading && !error && attempts.length > 0 && (
-//                 <div className="space-y-4">
-//                   {attempts.map((attempt) => (
-//                     <div
-//                       key={attempt.id}
-//                       className="rounded-xl border border-white/10 bg-[#080D1B] p-5"
-//                     >
-//                       <div className="flex items-start justify-between gap-4">
-//                         <div>
-//                           <h3 className="text-base font-semibold text-white">
-//                             {attempt.question}
-//                           </h3>
+//               {/* No Saved Attempts */}
+//               {!loading &&
+//                 !error &&
+//                 totalAttempts === 0 && (
+//                   <div className="flex min-h-72 flex-col items-center justify-center text-center">
+//                     <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-500/10">
+//                       <Database
+//                         size={30}
+//                         className="text-indigo-400"
+//                       />
+//                     </div>
 
-//                           <p className="mt-2 text-xs text-slate-400">
-//                             {attempt.jobRole} · {attempt.experience} ·{" "}
-//                             {new Date(attempt.createdAt).toLocaleDateString(
-//                               "en-IN",
-//                               {
+//                     <h3 className="text-lg font-semibold">
+//                       No Interview Attempts Yet
+//                     </h3>
+
+//                     <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">
+//                       Your saved interview attempts, scores
+//                       and AI feedback will appear here.
+//                     </p>
+//                   </div>
+//                 )}
+
+//               {/* No Matching Results */}
+//               {!loading &&
+//                 !error &&
+//                 totalAttempts > 0 &&
+//                 filteredAttempts.length === 0 && (
+//                   <div className="flex min-h-64 flex-col items-center justify-center text-center">
+//                     <Search
+//                       size={36}
+//                       className="mb-4 text-slate-500"
+//                     />
+
+//                     <h3 className="text-lg font-semibold">
+//                       No Matching Interviews
+//                     </h3>
+
+//                     <p className="mt-2 text-sm text-slate-400">
+//                       Try changing your search or filters.
+//                     </p>
+
+//                     <button
+//                       type="button"
+//                       onClick={resetFilters}
+//                       className="mt-5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium transition hover:bg-indigo-500"
+//                     >
+//                       Clear All Filters
+//                     </button>
+//                   </div>
+//                 )}
+
+//               {/* Paginated History Cards */}
+//               {!loading &&
+//                 !error &&
+//                 paginatedAttempts.length > 0 && (
+//                   <div className="space-y-4">
+//                     {paginatedAttempts.map((attempt) => (
+//                       <div
+//                         key={attempt.id}
+//                         className="rounded-xl border border-white/10 bg-[#080D1B] p-5 transition hover:border-indigo-500/30"
+//                       >
+//                         <div className="flex items-start justify-between gap-4">
+//                           <div className="min-w-0">
+//                             <h3 className="text-base font-semibold text-white">
+//                               {attempt.question}
+//                             </h3>
+
+//                             <p className="mt-2 text-xs text-slate-400">
+//                               {attempt.jobRole} ·{" "}
+//                               {attempt.experience} ·{" "}
+//                               {new Date(
+//                                 attempt.createdAt
+//                               ).toLocaleDateString("en-IN", {
 //                                 day: "2-digit",
 //                                 month: "short",
 //                                 year: "numeric",
-//                               },
-//                             )}
-//                           </p>
+//                               })}
+//                             </p>
+//                           </div>
+
+//                           <span className="shrink-0 rounded-lg bg-indigo-500/15 px-3 py-1.5 text-sm font-semibold text-indigo-300">
+//                             {attempt.score}/10
+//                           </span>
 //                         </div>
 
-//                         <span className="shrink-0 rounded-lg bg-indigo-500/15 px-3 py-1.5 text-sm font-semibold text-indigo-300">
-//                           {attempt.score}/10
-//                         </span>
+//                         {/* Score Progress */}
+//                         <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-700">
+//                           <div
+//                             className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
+//                             style={{
+//                               width: `${Math.min(
+//                                 100,
+//                                 Math.max(
+//                                   0,
+//                                   attempt.score * 10
+//                                 )
+//                               )}%`,
+//                             }}
+//                           />
+//                         </div>
+
+//                         {/* Short Feedback */}
+//                         <p className="mt-4 line-clamp-2 text-sm leading-6 text-slate-400">
+//                           {attempt.feedback}
+//                         </p>
+
+//                         {/* Expand / Collapse */}
+//                         <button
+//                           type="button"
+//                           onClick={() =>
+//                             setExpandedAttemptId(
+//                               expandedAttemptId === attempt.id
+//                                 ? null
+//                                 : attempt.id
+//                             )
+//                           }
+//                           aria-expanded={
+//                             expandedAttemptId === attempt.id
+//                           }
+//                           className="mt-4 flex items-center gap-2 text-sm font-medium text-indigo-400 transition hover:text-indigo-300"
+//                         >
+//                           {expandedAttemptId === attempt.id ? (
+//                             <>
+//                               Hide Evaluation
+//                               <ChevronUp size={16} />
+//                             </>
+//                           ) : (
+//                             <>
+//                               View Evaluation
+//                               <ChevronDown size={16} />
+//                             </>
+//                           )}
+//                         </button>
+
+//                         {/* Evaluation Details */}
+//                         {expandedAttemptId === attempt.id && (
+//                           <div className="mt-5 space-y-5 border-t border-white/10 pt-5">
+//                             {/* Candidate Answer */}
+//                             <div>
+//                               <h4 className="mb-2 text-sm font-semibold text-white">
+//                                 Your Answer
+//                               </h4>
+
+//                               <p className="whitespace-pre-wrap rounded-xl bg-[#111A2E] p-4 text-sm leading-6 text-slate-300">
+//                                 {attempt.answer}
+//                               </p>
+//                             </div>
+
+//                             {/* Strengths */}
+//                             <div>
+//                               <h4 className="mb-2 text-sm font-semibold text-emerald-400">
+//                                 Strengths
+//                               </h4>
+
+//                               <ul className="space-y-2 text-sm text-slate-300">
+//                                 {attempt.strengths.map(
+//                                   (strength, index) => (
+//                                     <li
+//                                       key={index}
+//                                       className="flex items-start gap-2"
+//                                     >
+//                                       <span className="text-emerald-400">
+//                                         ✓
+//                                       </span>
+//                                       <span>{strength}</span>
+//                                     </li>
+//                                   )
+//                                 )}
+//                               </ul>
+//                             </div>
+
+//                             {/* Missing Points */}
+//                             <div>
+//                               <h4 className="mb-2 text-sm font-semibold text-amber-400">
+//                                 Missing Points
+//                               </h4>
+
+//                               <ul className="space-y-2 text-sm text-slate-300">
+//                                 {attempt.missingPoints.map(
+//                                   (point, index) => (
+//                                     <li
+//                                       key={index}
+//                                       className="flex items-start gap-2"
+//                                     >
+//                                       <span className="text-amber-400">
+//                                         •
+//                                       </span>
+//                                       <span>{point}</span>
+//                                     </li>
+//                                   )
+//                                 )}
+//                               </ul>
+//                             </div>
+
+//                             {/* AI Feedback */}
+//                             <div>
+//                               <h4 className="mb-2 text-sm font-semibold text-indigo-400">
+//                                 AI Feedback
+//                               </h4>
+
+//                               <p className="whitespace-pre-wrap text-sm leading-6 text-slate-300">
+//                                 {attempt.feedback}
+//                               </p>
+//                             </div>
+
+//                             {/* Suggested Answer */}
+//                             <div>
+//                               <h4 className="mb-2 text-sm font-semibold text-violet-400">
+//                                 Suggested Answer
+//                               </h4>
+
+//                               <p className="whitespace-pre-wrap rounded-xl border border-violet-500/20 bg-violet-500/5 p-4 text-sm leading-6 text-slate-300">
+//                                 {attempt.suggestedAnswer}
+//                               </p>
+//                             </div>
+//                           </div>
+//                         )}
 //                       </div>
+//                     ))}
+//                   </div>
+//                 )}
 
-//                       {/* Score Progress */}
-//                       <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-700">
-//                         <div
-//                           className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
-//                           style={{
-//                             width: `${Math.min(
-//                               100,
-//                               Math.max(0, attempt.score * 10),
-//                             )}%`,
-//                           }}
-//                         />
+//               {/* Pagination */}
+//               {!loading &&
+//                 !error &&
+//                 filteredAttempts.length > 0 && (
+//                   <div className="mt-7 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-5">
+//                     <p className="text-sm text-slate-400">
+//                       Showing{" "}
+//                       <span className="text-white">
+//                         {startIndex + 1}–
+//                         {Math.min(
+//                           startIndex + PAGE_SIZE,
+//                           filteredAttempts.length
+//                         )}
+//                       </span>{" "}
+//                       of {filteredAttempts.length}
+//                     </p>
+
+//                     {totalPages > 1 && (
+//                       <div className="flex items-center gap-2">
+//                         <button
+//                           type="button"
+//                           onClick={() =>
+//                             changePage(safePage - 1)
+//                           }
+//                           disabled={safePage === 1}
+//                           aria-label="Previous page"
+//                           className="rounded-lg border border-white/10 bg-[#080D1B] p-2 text-slate-300 transition hover:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+//                         >
+//                           <ChevronLeft size={18} />
+//                         </button>
+
+//                         {Array.from(
+//                           { length: totalPages },
+//                           (_, index) => index + 1
+//                         ).map((page) => (
+//                           <button
+//                             key={page}
+//                             type="button"
+//                             onClick={() => changePage(page)}
+//                             aria-label={`Page ${page}`}
+//                             aria-current={
+//                               safePage === page
+//                                 ? "page"
+//                                 : undefined
+//                             }
+//                             className={`h-9 min-w-9 rounded-lg px-2 text-sm font-medium transition ${
+//                               safePage === page
+//                                 ? "bg-indigo-600 text-white"
+//                                 : "border border-white/10 bg-[#080D1B] text-slate-400 hover:text-white"
+//                             }`}
+//                           >
+//                             {page}
+//                           </button>
+//                         ))}
+
+//                         <button
+//                           type="button"
+//                           onClick={() =>
+//                             changePage(safePage + 1)
+//                           }
+//                           disabled={safePage === totalPages}
+//                           aria-label="Next page"
+//                           className="rounded-lg border border-white/10 bg-[#080D1B] p-2 text-slate-300 transition hover:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+//                         >
+//                           <ChevronRight size={18} />
+//                         </button>
 //                       </div>
-
-//                       {/* Short Feedback */}
-                    
-// {/* Short Feedback */}
-// <p className="mt-4 line-clamp-2 text-sm leading-6 text-slate-400">
-//   {attempt.feedback}
-// </p>
-
-// {/* Expand / Collapse Button */}
-// <button
-//   type="button"
-//   onClick={() =>
-//     setExpandedAttemptId(
-//       expandedAttemptId === attempt.id ? null : attempt.id
-//     )
-//   }
-//   aria-expanded={expandedAttemptId === attempt.id}
-//   className="mt-4 flex items-center gap-2 text-sm font-medium text-indigo-400 transition hover:text-indigo-300"
-// >
-//   {expandedAttemptId === attempt.id ? (
-//     <>
-//       Hide Evaluation
-//       <ChevronUp size={16} />
-//     </>
-//   ) : (
-//     <>
-//       View Evaluation
-//       <ChevronDown size={16} />
-//     </>
-//   )}
-// </button>
-
-// {/* Expanded Evaluation Details */}
-// {expandedAttemptId === attempt.id && (
-//   <div className="mt-5 space-y-5 border-t border-white/10 pt-5">
-
-//     {/* Candidate Answer */}
-//     <div>
-//       <h4 className="mb-2 text-sm font-semibold text-white">
-//         Your Answer
-//       </h4>
-//       <p className="whitespace-pre-wrap rounded-xl bg-[#111A2E] p-4 text-sm leading-6 text-slate-300">
-//         {attempt.answer}
-//       </p>
-//     </div>
-
-//     {/* Strengths */}
-//     <div>
-//       <h4 className="mb-2 text-sm font-semibold text-emerald-400">
-//         Strengths
-//       </h4>
-//       <ul className="space-y-2 text-sm text-slate-300">
-//         {attempt.strengths.map((strength, index) => (
-//           <li key={index} className="flex items-start gap-2">
-//             <span className="text-emerald-400">✓</span>
-//             <span>{strength}</span>
-//           </li>
-//         ))}
-//       </ul>
-//     </div>
-
-//     {/* Missing Points */}
-//     <div>
-//       <h4 className="mb-2 text-sm font-semibold text-amber-400">
-//         Missing Points
-//       </h4>
-//       <ul className="space-y-2 text-sm text-slate-300">
-//         {attempt.missingPoints.map((point, index) => (
-//           <li key={index} className="flex items-start gap-2">
-//             <span className="text-amber-400">•</span>
-//             <span>{point}</span>
-//           </li>
-//         ))}
-//       </ul>
-//     </div>
-
-//     {/* Complete Feedback */}
-//     <div>
-//       <h4 className="mb-2 text-sm font-semibold text-indigo-400">
-//         AI Feedback
-//       </h4>
-//       <p className="whitespace-pre-wrap text-sm leading-6 text-slate-300">
-//         {attempt.feedback}
-//       </p>
-//     </div>
-
-//     {/* Suggested Answer */}
-//     <div>
-//       <h4 className="mb-2 text-sm font-semibold text-violet-400">
-//         Suggested Answer
-//       </h4>
-//       <p className="whitespace-pre-wrap rounded-xl border border-violet-500/20 bg-violet-500/5 p-4 text-sm leading-6 text-slate-300">
-//         {attempt.suggestedAnswer}
-//       </p>
-//     </div>
-
-//   </div>
-// )}
-
-//                     </div>
-//                   ))}
-//                 </div>
-//               )}
-
-//               {/* No Attempts */}
-//               {!loading && !error && attempts.length === 0 && (
-//                 <p className="py-10 text-center text-slate-400">
-//                   No saved interview attempts found.
-//                 </p>
-//               )}
+//                     )}
+//                   </div>
+//                 )}
 //             </div>
 //           </main>
 //         </div>
@@ -368,6 +735,10 @@ import {
   RotateCcw,
   ChevronLeft,
   ChevronRight,
+  Layers3,
+  Loader2,
+  CalendarDays,
+  Eye,
 } from "lucide-react";
 
 import Sidebar from "../components/Sidebar";
@@ -378,26 +749,196 @@ import type {
   InterviewHistoryResponse,
 } from "../types/interview";
 
+const API_URL = "http://127.0.0.1:8000";
 const PAGE_SIZE = 5;
 
 type ScoreFilter = "all" | "high" | "medium" | "low";
+type HistoryTab = "sessions" | "attempts";
+
+type InterviewSession = {
+  id: number;
+  jobRole: string;
+  experience: string;
+  totalQuestions: number;
+  averageScore: number;
+  createdAt: string;
+};
+
+type InterviewSessionsResponse = {
+  total: number;
+  sessions: InterviewSession[];
+};
+
+type SessionAttempt = {
+  id: number;
+  question: string;
+  answer: string;
+  score: number;
+  strengths: string[];
+  missingPoints: string[];
+  feedback: string;
+  suggestedAnswer: string;
+};
+
+type SessionDetailsResponse = {
+  sessionId: number;
+  jobRole: string;
+  experience: string;
+  totalQuestions: number;
+  averageScore: number;
+  attempts: SessionAttempt[];
+};
+
+function formatDate(date: string) {
+  return new Date(date).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function ScoreBar({ score }: { score: number }) {
+  return (
+    <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-700">
+      <div
+        className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all"
+        style={{
+          width: `${Math.min(
+            100,
+            Math.max(0, score * 10)
+          )}%`,
+        }}
+      />
+    </div>
+  );
+}
+
+function EvaluationDetails({
+  attempt,
+}: {
+  attempt: SessionAttempt;
+}) {
+  return (
+    <div className="space-y-5 border-t border-white/10 pt-5">
+      <div>
+        <h4 className="mb-2 text-sm font-semibold text-white">
+          Your Answer
+        </h4>
+
+        <p className="whitespace-pre-wrap rounded-xl bg-[#111A2E] p-4 text-sm leading-6 text-slate-300">
+          {attempt.answer}
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+          <h4 className="mb-3 text-sm font-semibold text-emerald-400">
+            Strengths
+          </h4>
+
+          {attempt.strengths.length > 0 ? (
+            <ul className="space-y-2 text-sm text-slate-300">
+              {attempt.strengths.map((strength, index) => (
+                <li key={index} className="flex gap-2">
+                  <span className="text-emerald-400">✓</span>
+                  <span>{strength}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-slate-400">
+              No strengths identified.
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+          <h4 className="mb-3 text-sm font-semibold text-amber-400">
+            Missing Points
+          </h4>
+
+          {attempt.missingPoints.length > 0 ? (
+            <ul className="space-y-2 text-sm text-slate-300">
+              {attempt.missingPoints.map((point, index) => (
+                <li key={index} className="flex gap-2">
+                  <span className="text-amber-400">•</span>
+                  <span>{point}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-slate-400">
+              No missing points identified.
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <h4 className="mb-2 text-sm font-semibold text-indigo-400">
+          AI Feedback
+        </h4>
+
+        <p className="whitespace-pre-wrap text-sm leading-6 text-slate-300">
+          {attempt.feedback}
+        </p>
+      </div>
+
+      <div>
+        <h4 className="mb-2 text-sm font-semibold text-violet-400">
+          Suggested Answer
+        </h4>
+
+        <p className="whitespace-pre-wrap rounded-xl border border-violet-500/20 bg-violet-500/5 p-4 text-sm leading-6 text-slate-300">
+          {attempt.suggestedAnswer}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export default function InterviewHistory() {
-  const [attempts, setAttempts] = useState<InterviewAttempt[]>([]);
+  const [activeTab, setActiveTab] =
+    useState<HistoryTab>("sessions");
+
+  // Individual attempts
+  const [attempts, setAttempts] =
+    useState<InterviewAttempt[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Interview sessions
+  const [sessions, setSessions] =
+    useState<InterviewSession[]>([]);
+  const [sessionsLoading, setSessionsLoading] =
+    useState(true);
+  const [sessionsError, setSessionsError] = useState("");
+
+  // Session details
+  const [expandedSessionId, setExpandedSessionId] =
+    useState<number | null>(null);
+
+  const [sessionDetails, setSessionDetails] = useState<
+    Record<number, SessionDetailsResponse>
+  >({});
+
+  const [sessionDetailsLoading, setSessionDetailsLoading] =
+    useState<number | null>(null);
+
+  const [sessionDetailsError, setSessionDetailsError] =
+    useState("");
 
   const [expandedAttemptId, setExpandedAttemptId] =
     useState<number | null>(null);
 
-  // Day 84 - Search, Filter and Pagination
+  // Search, filters and pagination
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRole, setSelectedRole] = useState("all");
   const [scoreFilter, setScoreFilter] =
     useState<ScoreFilter>("all");
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Fetch interview history
+  // Fetch individual attempts
   useEffect(() => {
     const controller = new AbortController();
 
@@ -407,12 +948,14 @@ export default function InterviewHistory() {
         setError("");
 
         const response = await fetch(
-          "http://127.0.0.1:8000/attempts",
+          `${API_URL}/attempts`,
           { signal: controller.signal }
         );
 
         if (!response.ok) {
-          throw new Error("Failed to fetch interview history");
+          throw new Error(
+            "Failed to fetch interview history"
+          );
         }
 
         const result: InterviewHistoryResponse =
@@ -441,7 +984,96 @@ export default function InterviewHistory() {
     return () => controller.abort();
   }, []);
 
-  // Overall statistics
+  // Fetch interview sessions
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function fetchSessions() {
+      try {
+        setSessionsLoading(true);
+        setSessionsError("");
+
+        const response = await fetch(
+          `${API_URL}/sessions`,
+          { signal: controller.signal }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            "Failed to fetch interview sessions"
+          );
+        }
+
+        const result: InterviewSessionsResponse =
+          await response.json();
+
+        if (!controller.signal.aborted) {
+          setSessions(result.sessions);
+        }
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          setSessionsError(
+            err instanceof Error
+              ? err.message
+              : "Something went wrong"
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setSessionsLoading(false);
+        }
+      }
+    }
+
+    fetchSessions();
+
+    return () => controller.abort();
+  }, []);
+
+  // Fetch session details when expanded
+  async function handleToggleSession(sessionId: number) {
+    if (expandedSessionId === sessionId) {
+      setExpandedSessionId(null);
+      return;
+    }
+
+    setExpandedSessionId(sessionId);
+    setSessionDetailsError("");
+
+    if (sessionDetails[sessionId]) return;
+
+    try {
+      setSessionDetailsLoading(sessionId);
+
+      const response = await fetch(
+        `${API_URL}/sessions/${sessionId}/attempts`
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Failed to fetch session details"
+        );
+      }
+
+      const result: SessionDetailsResponse =
+        await response.json();
+
+      setSessionDetails((prev) => ({
+        ...prev,
+        [sessionId]: result,
+      }));
+    } catch (err) {
+      setSessionDetailsError(
+        err instanceof Error
+          ? err.message
+          : "Unable to load session details"
+      );
+    } finally {
+      setSessionDetailsLoading(null);
+    }
+  }
+
+  // Statistics
   const totalAttempts = attempts.length;
 
   const averageScore =
@@ -456,17 +1088,20 @@ export default function InterviewHistory() {
 
   const bestScore =
     totalAttempts > 0
-      ? Math.max(...attempts.map((attempt) => attempt.score))
+      ? Math.max(
+          ...attempts.map((attempt) => attempt.score)
+        )
       : 0;
 
-  // Unique job roles from API data
   const jobRoles = useMemo(() => {
-    return [...new Set(attempts.map((a) => a.jobRole))]
+    return [
+      ...new Set(attempts.map((a) => a.jobRole)),
+    ]
       .filter(Boolean)
       .sort((a, b) => a.localeCompare(b));
   }, [attempts]);
 
-  // Search and combined filters
+  // Filter individual attempts
   const filteredAttempts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
@@ -491,9 +1126,13 @@ export default function InterviewHistory() {
 
       return matchesSearch && matchesRole && matchesScore;
     });
-  }, [attempts, searchQuery, selectedRole, scoreFilter]);
+  }, [
+    attempts,
+    searchQuery,
+    selectedRole,
+    scoreFilter,
+  ]);
 
-  // Pagination
   const totalPages = Math.max(
     1,
     Math.ceil(filteredAttempts.length / PAGE_SIZE)
@@ -539,23 +1178,21 @@ export default function InterviewHistory() {
           <Header />
 
           <main className="mx-auto max-w-7xl px-6 py-8">
-            {/* Page Heading */}
-            <div className="mb-8">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-400">
-                  <History size={24} />
-                </div>
+            {/* Heading */}
+            <div className="mb-8 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-400">
+                <History size={24} />
+              </div>
 
-                <div>
-                  <h1 className="text-3xl font-bold">
-                    Interview History
-                  </h1>
+              <div>
+                <h1 className="text-3xl font-bold">
+                  Interview History
+                </h1>
 
-                  <p className="mt-1 text-sm text-slate-400">
-                    Track your interview attempts and AI
-                    evaluation scores.
-                  </p>
-                </div>
+                <p className="mt-1 text-sm text-slate-400">
+                  Track your interview sessions,
+                  attempts and AI evaluation scores.
+                </p>
               </div>
             </div>
 
@@ -621,448 +1258,594 @@ export default function InterviewHistory() {
 
             {/* History Container */}
             <div className="rounded-2xl border border-white/10 bg-[#111A2E] p-6">
-              {/* Section Header */}
-              <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-semibold">
-                    Recent Attempts
-                  </h2>
+              {/* Tabs */}
+              <div className="mb-7 flex flex-wrap gap-3 border-b border-white/10 pb-5">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("sessions")}
+                  className={`flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition ${
+                    activeTab === "sessions"
+                      ? "bg-indigo-600 text-white"
+                      : "bg-[#080D1B] text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <Layers3 size={17} />
+                  Interview Sessions
+                  <span className="rounded-md bg-white/10 px-2 py-0.5 text-xs">
+                    {sessions.length}
+                  </span>
+                </button>
 
-                  <p className="mt-1 text-sm text-slate-400">
-                    Review your previous interview evaluations.
-                  </p>
-                </div>
-
-                <span className="rounded-lg bg-indigo-500/15 px-3 py-1.5 text-sm text-indigo-300">
-                  {totalAttempts} Attempts
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("attempts")}
+                  className={`flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition ${
+                    activeTab === "attempts"
+                      ? "bg-indigo-600 text-white"
+                      : "bg-[#080D1B] text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <ClipboardList size={17} />
+                  Question Attempts
+                  <span className="rounded-md bg-white/10 px-2 py-0.5 text-xs">
+                    {totalAttempts}
+                  </span>
+                </button>
               </div>
 
-              {/* Search and Filters */}
-              {!loading && !error && totalAttempts > 0 && (
-                <div className="mb-7 space-y-4">
-                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-                    {/* Search */}
-                    <div className="relative">
-                      <Search
-                        size={18}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
-                      />
+              {/* Interview Sessions Tab */}
+              {activeTab === "sessions" && (
+                <div>
+                  <div className="mb-6">
+                    <h2 className="text-xl font-semibold">
+                      Interview Sessions
+                    </h2>
 
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => {
-                          setSearchQuery(e.target.value);
-                          resetPagination();
-                        }}
-                        placeholder="Search interview questions..."
-                        aria-label="Search interview questions"
-                        className="w-full rounded-xl border border-white/10 bg-[#080D1B] py-3 pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-indigo-500"
-                      />
-                    </div>
-
-                    {/* Job Role */}
-                    <div className="relative">
-                      <Filter
-                        size={17}
-                        className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
-                      />
-
-                      <select
-                        value={selectedRole}
-                        onChange={(e) => {
-                          setSelectedRole(e.target.value);
-                          resetPagination();
-                        }}
-                        aria-label="Filter by job role"
-                        className="w-full appearance-none rounded-xl border border-white/10 bg-[#080D1B] py-3 pl-11 pr-9 text-sm text-white outline-none focus:border-indigo-500"
-                      >
-                        <option value="all">All Job Roles</option>
-
-                        {jobRoles.map((role) => (
-                          <option key={role} value={role}>
-                            {role}
-                          </option>
-                        ))}
-                      </select>
-
-                      <ChevronDown
-                        size={16}
-                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
-                      />
-                    </div>
-
-                    {/* Score Filter */}
-                    <div className="relative">
-                      <select
-                        value={scoreFilter}
-                        onChange={(e) => {
-                          setScoreFilter(
-                            e.target.value as ScoreFilter
-                          );
-                          resetPagination();
-                        }}
-                        aria-label="Filter by evaluation score"
-                        className="w-full appearance-none rounded-xl border border-white/10 bg-[#080D1B] px-4 py-3 pr-9 text-sm text-white outline-none focus:border-indigo-500"
-                      >
-                        <option value="all">All Scores</option>
-                        <option value="high">
-                          High Score (8–10)
-                        </option>
-                        <option value="medium">
-                          Medium Score (5–7.9)
-                        </option>
-                        <option value="low">
-                          Low Score (Below 5)
-                        </option>
-                      </select>
-
-                      <ChevronDown
-                        size={16}
-                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Results and Reset */}
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-sm text-slate-400">
-                      Showing{" "}
-                      <span className="font-semibold text-indigo-300">
-                        {filteredAttempts.length}
-                      </span>{" "}
-                      of {totalAttempts} attempts
-                    </p>
-
-                    {hasActiveFilters && (
-                      <button
-                        type="button"
-                        onClick={resetFilters}
-                        className="flex items-center gap-2 text-sm text-slate-400 transition hover:text-white"
-                      >
-                        <RotateCcw size={15} />
-                        Reset Filters
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Loading */}
-              {loading && (
-                <div className="flex min-h-60 flex-col items-center justify-center gap-4">
-                  <div className="h-9 w-9 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
-
-                  <p className="text-sm text-slate-400">
-                    Loading interview history...
-                  </p>
-                </div>
-              )}
-
-              {/* API Error */}
-              {!loading && error && (
-                <div
-                  role="alert"
-                  className="rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-400"
-                >
-                  {error}
-                </div>
-              )}
-
-              {/* No Saved Attempts */}
-              {!loading &&
-                !error &&
-                totalAttempts === 0 && (
-                  <div className="flex min-h-72 flex-col items-center justify-center text-center">
-                    <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-500/10">
-                      <Database
-                        size={30}
-                        className="text-indigo-400"
-                      />
-                    </div>
-
-                    <h3 className="text-lg font-semibold">
-                      No Interview Attempts Yet
-                    </h3>
-
-                    <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">
-                      Your saved interview attempts, scores
-                      and AI feedback will appear here.
+                    <p className="mt-1 text-sm text-slate-400">
+                      Review complete interview sessions
+                      and question-wise evaluations.
                     </p>
                   </div>
-                )}
 
-              {/* No Matching Results */}
-              {!loading &&
-                !error &&
-                totalAttempts > 0 &&
-                filteredAttempts.length === 0 && (
-                  <div className="flex min-h-64 flex-col items-center justify-center text-center">
-                    <Search
-                      size={36}
-                      className="mb-4 text-slate-500"
-                    />
+                  {sessionsLoading && (
+                    <div className="flex min-h-60 items-center justify-center gap-3 text-slate-400">
+                      <Loader2
+                        size={22}
+                        className="animate-spin text-indigo-400"
+                      />
+                      Loading interview sessions...
+                    </div>
+                  )}
 
-                    <h3 className="text-lg font-semibold">
-                      No Matching Interviews
-                    </h3>
-
-                    <p className="mt-2 text-sm text-slate-400">
-                      Try changing your search or filters.
-                    </p>
-
-                    <button
-                      type="button"
-                      onClick={resetFilters}
-                      className="mt-5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium transition hover:bg-indigo-500"
+                  {!sessionsLoading && sessionsError && (
+                    <div
+                      role="alert"
+                      className="rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-400"
                     >
-                      Clear All Filters
-                    </button>
-                  </div>
-                )}
+                      {sessionsError}
+                    </div>
+                  )}
 
-              {/* Paginated History Cards */}
-              {!loading &&
-                !error &&
-                paginatedAttempts.length > 0 && (
-                  <div className="space-y-4">
-                    {paginatedAttempts.map((attempt) => (
-                      <div
-                        key={attempt.id}
-                        className="rounded-xl border border-white/10 bg-[#080D1B] p-5 transition hover:border-indigo-500/30"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0">
-                            <h3 className="text-base font-semibold text-white">
-                              {attempt.question}
-                            </h3>
+                  {!sessionsLoading &&
+                    !sessionsError &&
+                    sessions.length === 0 && (
+                      <div className="flex min-h-60 flex-col items-center justify-center text-center">
+                        <Database
+                          size={36}
+                          className="mb-4 text-indigo-400"
+                        />
 
-                            <p className="mt-2 text-xs text-slate-400">
-                              {attempt.jobRole} ·{" "}
-                              {attempt.experience} ·{" "}
-                              {new Date(
-                                attempt.createdAt
-                              ).toLocaleDateString("en-IN", {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
-                              })}
-                            </p>
-                          </div>
+                        <h3 className="text-lg font-semibold">
+                          No Interview Sessions Yet
+                        </h3>
 
-                          <span className="shrink-0 rounded-lg bg-indigo-500/15 px-3 py-1.5 text-sm font-semibold text-indigo-300">
-                            {attempt.score}/10
-                          </span>
-                        </div>
+                        <p className="mt-2 text-sm text-slate-400">
+                          Complete an interview to see
+                          its session history here.
+                        </p>
+                      </div>
+                    )}
 
-                        {/* Score Progress */}
-                        <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-700">
+                  {!sessionsLoading &&
+                    !sessionsError &&
+                    sessions.length > 0 && (
+                      <div className="space-y-4">
+                        {sessions.map((session) => (
                           <div
-                            className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
-                            style={{
-                              width: `${Math.min(
-                                100,
-                                Math.max(
-                                  0,
-                                  attempt.score * 10
+                            key={session.id}
+                            className="rounded-xl border border-white/10 bg-[#080D1B] p-5 transition hover:border-indigo-500/30"
+                          >
+                            <div className="flex flex-wrap items-start justify-between gap-4">
+                              <div>
+                                <div className="mb-2 flex flex-wrap items-center gap-2">
+                                  <h3 className="text-lg font-semibold text-white">
+                                    {session.jobRole}
+                                  </h3>
+
+                                  <span className="rounded-lg bg-indigo-500/15 px-2.5 py-1 text-xs text-indigo-300">
+                                    Session #{session.id}
+                                  </span>
+                                </div>
+
+                                <p className="text-sm text-slate-400">
+                                  {session.experience} Experience
+                                </p>
+
+                                <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-slate-400">
+                                  <span className="flex items-center gap-2">
+                                    <CalendarDays size={15} />
+                                    {formatDate(
+                                      session.createdAt
+                                    )}
+                                  </span>
+
+                                  <span className="flex items-center gap-2">
+                                    <ClipboardList size={15} />
+                                    {session.totalQuestions} Questions
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="text-right">
+                                <p className="text-xs text-slate-400">
+                                  Average Score
+                                </p>
+
+                                <p className="mt-1 text-2xl font-bold text-indigo-400">
+                                  {session.averageScore}
+                                  <span className="text-sm text-slate-500">
+                                    /10
+                                  </span>
+                                </p>
+                              </div>
+                            </div>
+
+                            <ScoreBar
+                              score={session.averageScore}
+                            />
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleToggleSession(
+                                  session.id
                                 )
-                              )}%`,
+                              }
+                              aria-expanded={
+                                expandedSessionId === session.id
+                              }
+                              className="mt-5 flex items-center gap-2 text-sm font-medium text-indigo-400 transition hover:text-indigo-300"
+                            >
+                              <Eye size={16} />
+
+                              {expandedSessionId === session.id
+                                ? "Hide Interview Details"
+                                : "View Interview Details"}
+
+                              {expandedSessionId === session.id ? (
+                                <ChevronUp size={16} />
+                              ) : (
+                                <ChevronDown size={16} />
+                              )}
+                            </button>
+
+                            {expandedSessionId === session.id && (
+                              <div className="mt-5 border-t border-white/10 pt-5">
+                                {sessionDetailsLoading === session.id && (
+                                  <div className="flex items-center gap-3 py-5 text-sm text-slate-400">
+                                    <Loader2
+                                      size={18}
+                                      className="animate-spin"
+                                    />
+                                    Loading interview details...
+                                  </div>
+                                )}
+
+                                {sessionDetailsError &&
+                                  sessionDetailsLoading !== session.id &&
+                                  !sessionDetails[session.id] && (
+                                    <p className="text-sm text-red-400">
+                                      {sessionDetailsError}
+                                    </p>
+                                  )}
+
+                                {sessionDetails[session.id] && (
+                                  <div className="space-y-4">
+                                    {sessionDetails[session.id].attempts.length === 0 && (
+                                      <p className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-300">
+                                        No linked answers found for
+                                        this session. It may be an
+                                        older or incomplete interview.
+                                      </p>
+                                    )}
+
+                                    {sessionDetails[session.id].attempts.map(
+                                      (attempt, index) => (
+                                        <div
+                                          key={attempt.id}
+                                          className="rounded-xl border border-white/10 bg-[#111A2E] p-5"
+                                        >
+                                          <div className="flex items-start justify-between gap-4">
+                                            <div>
+                                              <p className="mb-2 text-xs font-semibold text-indigo-400">
+                                                Question {index + 1}
+                                              </p>
+
+                                              <h4 className="font-semibold leading-7 text-white">
+                                                {attempt.question}
+                                              </h4>
+                                            </div>
+
+                                            <span className="shrink-0 rounded-lg bg-indigo-500/15 px-3 py-1.5 text-sm font-semibold text-indigo-300">
+                                              {attempt.score}/10
+                                            </span>
+                                          </div>
+
+                                          <ScoreBar
+                                            score={attempt.score}
+                                          />
+
+                                          <div className="mt-5">
+                                            <EvaluationDetails
+                                              attempt={attempt}
+                                            />
+                                          </div>
+                                        </div>
+                                      )
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                </div>
+              )}
+
+              {/* Question Attempts Tab */}
+              {activeTab === "attempts" && (
+                <div>
+                  <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <h2 className="text-xl font-semibold">
+                        Recent Attempts
+                      </h2>
+
+                      <p className="mt-1 text-sm text-slate-400">
+                        Review your previous interview evaluations.
+                      </p>
+                    </div>
+
+                    <span className="rounded-lg bg-indigo-500/15 px-3 py-1.5 text-sm text-indigo-300">
+                      {totalAttempts} Attempts
+                    </span>
+                  </div>
+
+                  {/* Search and Filters */}
+                  {!loading && !error && totalAttempts > 0 && (
+                    <div className="mb-7 space-y-4">
+                      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                        <div className="relative">
+                          <Search
+                            size={18}
+                            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+                          />
+
+                          <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => {
+                              setSearchQuery(e.target.value);
+                              resetPagination();
                             }}
+                            placeholder="Search interview questions..."
+                            aria-label="Search interview questions"
+                            className="w-full rounded-xl border border-white/10 bg-[#080D1B] py-3 pl-11 pr-4 text-sm text-white outline-none placeholder:text-slate-500 focus:border-indigo-500"
                           />
                         </div>
 
-                        {/* Short Feedback */}
-                        <p className="mt-4 line-clamp-2 text-sm leading-6 text-slate-400">
-                          {attempt.feedback}
+                        <div className="relative">
+                          <Filter
+                            size={17}
+                            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+                          />
+
+                          <select
+                            value={selectedRole}
+                            onChange={(e) => {
+                              setSelectedRole(e.target.value);
+                              resetPagination();
+                            }}
+                            aria-label="Filter by job role"
+                            className="w-full appearance-none rounded-xl border border-white/10 bg-[#080D1B] py-3 pl-11 pr-9 text-sm text-white outline-none focus:border-indigo-500"
+                          >
+                            <option value="all">
+                              All Job Roles
+                            </option>
+
+                            {jobRoles.map((role) => (
+                              <option
+                                key={role}
+                                value={role}
+                              >
+                                {role}
+                              </option>
+                            ))}
+                          </select>
+
+                          <ChevronDown
+                            size={16}
+                            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+                          />
+                        </div>
+
+                        <div className="relative">
+                          <select
+                            value={scoreFilter}
+                            onChange={(e) => {
+                              setScoreFilter(
+                                e.target.value as ScoreFilter
+                              );
+                              resetPagination();
+                            }}
+                            aria-label="Filter by evaluation score"
+                            className="w-full appearance-none rounded-xl border border-white/10 bg-[#080D1B] px-4 py-3 pr-9 text-sm text-white outline-none focus:border-indigo-500"
+                          >
+                            <option value="all">
+                              All Scores
+                            </option>
+                            <option value="high">
+                              High Score (8–10)
+                            </option>
+                            <option value="medium">
+                              Medium Score (5–7.9)
+                            </option>
+                            <option value="low">
+                              Low Score (Below 5)
+                            </option>
+                          </select>
+
+                          <ChevronDown
+                            size={16}
+                            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm text-slate-400">
+                          Showing{" "}
+                          <span className="font-semibold text-indigo-300">
+                            {filteredAttempts.length}
+                          </span>{" "}
+                          of {totalAttempts} attempts
                         </p>
 
-                        {/* Expand / Collapse */}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setExpandedAttemptId(
-                              expandedAttemptId === attempt.id
-                                ? null
-                                : attempt.id
-                            )
-                          }
-                          aria-expanded={
-                            expandedAttemptId === attempt.id
-                          }
-                          className="mt-4 flex items-center gap-2 text-sm font-medium text-indigo-400 transition hover:text-indigo-300"
-                        >
-                          {expandedAttemptId === attempt.id ? (
-                            <>
-                              Hide Evaluation
-                              <ChevronUp size={16} />
-                            </>
-                          ) : (
-                            <>
-                              View Evaluation
-                              <ChevronDown size={16} />
-                            </>
-                          )}
-                        </button>
-
-                        {/* Evaluation Details */}
-                        {expandedAttemptId === attempt.id && (
-                          <div className="mt-5 space-y-5 border-t border-white/10 pt-5">
-                            {/* Candidate Answer */}
-                            <div>
-                              <h4 className="mb-2 text-sm font-semibold text-white">
-                                Your Answer
-                              </h4>
-
-                              <p className="whitespace-pre-wrap rounded-xl bg-[#111A2E] p-4 text-sm leading-6 text-slate-300">
-                                {attempt.answer}
-                              </p>
-                            </div>
-
-                            {/* Strengths */}
-                            <div>
-                              <h4 className="mb-2 text-sm font-semibold text-emerald-400">
-                                Strengths
-                              </h4>
-
-                              <ul className="space-y-2 text-sm text-slate-300">
-                                {attempt.strengths.map(
-                                  (strength, index) => (
-                                    <li
-                                      key={index}
-                                      className="flex items-start gap-2"
-                                    >
-                                      <span className="text-emerald-400">
-                                        ✓
-                                      </span>
-                                      <span>{strength}</span>
-                                    </li>
-                                  )
-                                )}
-                              </ul>
-                            </div>
-
-                            {/* Missing Points */}
-                            <div>
-                              <h4 className="mb-2 text-sm font-semibold text-amber-400">
-                                Missing Points
-                              </h4>
-
-                              <ul className="space-y-2 text-sm text-slate-300">
-                                {attempt.missingPoints.map(
-                                  (point, index) => (
-                                    <li
-                                      key={index}
-                                      className="flex items-start gap-2"
-                                    >
-                                      <span className="text-amber-400">
-                                        •
-                                      </span>
-                                      <span>{point}</span>
-                                    </li>
-                                  )
-                                )}
-                              </ul>
-                            </div>
-
-                            {/* AI Feedback */}
-                            <div>
-                              <h4 className="mb-2 text-sm font-semibold text-indigo-400">
-                                AI Feedback
-                              </h4>
-
-                              <p className="whitespace-pre-wrap text-sm leading-6 text-slate-300">
-                                {attempt.feedback}
-                              </p>
-                            </div>
-
-                            {/* Suggested Answer */}
-                            <div>
-                              <h4 className="mb-2 text-sm font-semibold text-violet-400">
-                                Suggested Answer
-                              </h4>
-
-                              <p className="whitespace-pre-wrap rounded-xl border border-violet-500/20 bg-violet-500/5 p-4 text-sm leading-6 text-slate-300">
-                                {attempt.suggestedAnswer}
-                              </p>
-                            </div>
-                          </div>
+                        {hasActiveFilters && (
+                          <button
+                            type="button"
+                            onClick={resetFilters}
+                            className="flex items-center gap-2 text-sm text-slate-400 hover:text-white"
+                          >
+                            <RotateCcw size={15} />
+                            Reset Filters
+                          </button>
                         )}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  )}
 
-              {/* Pagination */}
-              {!loading &&
-                !error &&
-                filteredAttempts.length > 0 && (
-                  <div className="mt-7 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-5">
-                    <p className="text-sm text-slate-400">
-                      Showing{" "}
-                      <span className="text-white">
-                        {startIndex + 1}–
-                        {Math.min(
-                          startIndex + PAGE_SIZE,
-                          filteredAttempts.length
-                        )}
-                      </span>{" "}
-                      of {filteredAttempts.length}
-                    </p>
+                  {loading && (
+                    <div className="flex min-h-60 items-center justify-center gap-3 text-slate-400">
+                      <Loader2
+                        size={22}
+                        className="animate-spin text-indigo-400"
+                      />
+                      Loading interview history...
+                    </div>
+                  )}
 
-                    {totalPages > 1 && (
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            changePage(safePage - 1)
-                          }
-                          disabled={safePage === 1}
-                          aria-label="Previous page"
-                          className="rounded-lg border border-white/10 bg-[#080D1B] p-2 text-slate-300 transition hover:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          <ChevronLeft size={18} />
-                        </button>
+                  {!loading && error && (
+                    <div
+                      role="alert"
+                      className="rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-400"
+                    >
+                      {error}
+                    </div>
+                  )}
 
-                        {Array.from(
-                          { length: totalPages },
-                          (_, index) => index + 1
-                        ).map((page) => (
-                          <button
-                            key={page}
-                            type="button"
-                            onClick={() => changePage(page)}
-                            aria-label={`Page ${page}`}
-                            aria-current={
-                              safePage === page
-                                ? "page"
-                                : undefined
-                            }
-                            className={`h-9 min-w-9 rounded-lg px-2 text-sm font-medium transition ${
-                              safePage === page
-                                ? "bg-indigo-600 text-white"
-                                : "border border-white/10 bg-[#080D1B] text-slate-400 hover:text-white"
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        ))}
+                  {!loading &&
+                    !error &&
+                    totalAttempts === 0 && (
+                      <div className="flex min-h-72 flex-col items-center justify-center text-center">
+                        <Database
+                          size={30}
+                          className="mb-4 text-indigo-400"
+                        />
+
+                        <h3 className="text-lg font-semibold">
+                          No Interview Attempts Yet
+                        </h3>
+
+                        <p className="mt-2 text-sm text-slate-400">
+                          Your saved attempts will appear here.
+                        </p>
+                      </div>
+                    )}
+
+                  {!loading &&
+                    !error &&
+                    totalAttempts > 0 &&
+                    filteredAttempts.length === 0 && (
+                      <div className="flex min-h-64 flex-col items-center justify-center text-center">
+                        <Search
+                          size={36}
+                          className="mb-4 text-slate-500"
+                        />
+
+                        <h3 className="text-lg font-semibold">
+                          No Matching Interviews
+                        </h3>
 
                         <button
                           type="button"
-                          onClick={() =>
-                            changePage(safePage + 1)
-                          }
-                          disabled={safePage === totalPages}
-                          aria-label="Next page"
-                          className="rounded-lg border border-white/10 bg-[#080D1B] p-2 text-slate-300 transition hover:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+                          onClick={resetFilters}
+                          className="mt-5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium hover:bg-indigo-500"
                         >
-                          <ChevronRight size={18} />
+                          Clear All Filters
                         </button>
                       </div>
                     )}
-                  </div>
-                )}
+
+                  {!loading &&
+                    !error &&
+                    paginatedAttempts.length > 0 && (
+                      <div className="space-y-4">
+                        {paginatedAttempts.map((attempt) => (
+                          <div
+                            key={attempt.id}
+                            className="rounded-xl border border-white/10 bg-[#080D1B] p-5 transition hover:border-indigo-500/30"
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="min-w-0">
+                                <h3 className="text-base font-semibold text-white">
+                                  {attempt.question}
+                                </h3>
+
+                                <p className="mt-2 text-xs text-slate-400">
+                                  {attempt.jobRole} ·{" "}
+                                  {attempt.experience} ·{" "}
+                                  {formatDate(
+                                    attempt.createdAt
+                                  )}
+                                </p>
+                              </div>
+
+                              <span className="shrink-0 rounded-lg bg-indigo-500/15 px-3 py-1.5 text-sm font-semibold text-indigo-300">
+                                {attempt.score}/10
+                              </span>
+                            </div>
+
+                            <ScoreBar score={attempt.score} />
+
+                            <p className="mt-4 line-clamp-2 text-sm leading-6 text-slate-400">
+                              {attempt.feedback}
+                            </p>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedAttemptId(
+                                  expandedAttemptId === attempt.id
+                                    ? null
+                                    : attempt.id
+                                )
+                              }
+                              aria-expanded={
+                                expandedAttemptId === attempt.id
+                              }
+                              className="mt-4 flex items-center gap-2 text-sm font-medium text-indigo-400 hover:text-indigo-300"
+                            >
+                              {expandedAttemptId === attempt.id ? (
+                                <>
+                                  Hide Evaluation
+                                  <ChevronUp size={16} />
+                                </>
+                              ) : (
+                                <>
+                                  View Evaluation
+                                  <ChevronDown size={16} />
+                                </>
+                              )}
+                            </button>
+
+                            {expandedAttemptId === attempt.id && (
+                              <div className="mt-5">
+                                <EvaluationDetails
+                                  attempt={attempt}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                  {/* Pagination */}
+                  {!loading &&
+                    !error &&
+                    filteredAttempts.length > 0 && (
+                      <div className="mt-7 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-5">
+                        <p className="text-sm text-slate-400">
+                          Showing{" "}
+                          <span className="text-white">
+                            {startIndex + 1}–
+                            {Math.min(
+                              startIndex + PAGE_SIZE,
+                              filteredAttempts.length
+                            )}
+                          </span>{" "}
+                          of {filteredAttempts.length}
+                        </p>
+
+                        {totalPages > 1 && (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                changePage(safePage - 1)
+                              }
+                              disabled={safePage === 1}
+                              aria-label="Previous page"
+                              className="rounded-lg border border-white/10 bg-[#080D1B] p-2 text-slate-300 disabled:opacity-40"
+                            >
+                              <ChevronLeft size={18} />
+                            </button>
+
+                            {Array.from(
+                              { length: totalPages },
+                              (_, index) => index + 1
+                            ).map((page) => (
+                              <button
+                                key={page}
+                                type="button"
+                                onClick={() => changePage(page)}
+                                aria-current={
+                                  safePage === page
+                                    ? "page"
+                                    : undefined
+                                }
+                                className={`h-9 min-w-9 rounded-lg px-2 text-sm font-medium ${
+                                  safePage === page
+                                    ? "bg-indigo-600 text-white"
+                                    : "border border-white/10 bg-[#080D1B] text-slate-400 hover:text-white"
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            ))}
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                changePage(safePage + 1)
+                              }
+                              disabled={
+                                safePage === totalPages
+                              }
+                              aria-label="Next page"
+                              className="rounded-lg border border-white/10 bg-[#080D1B] p-2 text-slate-300 disabled:opacity-40"
+                            >
+                              <ChevronRight size={18} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                </div>
+              )}
             </div>
           </main>
         </div>

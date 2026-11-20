@@ -26,6 +26,7 @@ type InterviewResultsProps = {
   questions: string[];
   results: Record<number, QuestionResult>;
   onRestart: () => void;
+   sessionId: number | null;
 };
 
 export default function InterviewResults({
@@ -34,6 +35,7 @@ export default function InterviewResults({
   questions,
   results,
   onRestart,
+  sessionId,
 }: InterviewResultsProps) {
   const completedResults = questions
     .map((question, index) => ({

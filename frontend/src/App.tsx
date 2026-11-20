@@ -12,6 +12,7 @@ function App() {
         <Route path="/" element={<Dashboard />} />
           <Route path="/history" element={<InterviewHistory />} />
           <Route path="/mock-interview" element={<MockInterview />} />
+        
       </Routes>
     </BrowserRouter>
   );

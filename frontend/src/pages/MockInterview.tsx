@@ -1,8 +1,430 @@
-import { useState } from "react";
-import { BrainCircuit, Sparkles, AlertCircle, RotateCcw } from "lucide-react";
+
+// import { useRef, useState } from "react";
+// import {
+//   BrainCircuit,
+//   Sparkles,
+//   AlertCircle,
+//   RotateCcw,
+// } from "lucide-react";
+
+// import InterviewSetup from "../components/Interview/InterviewSetup";
+// import type { InterviewConfig } from "../components/Interview/InterviewSetup";
+// import InterviewQuestion from "../components/Interview/InterviewQuestion";
+// import InterviewResults from "../components/Interview/InterviewResults";
+
+// type GenerateQuestionsResponse = {
+//   message: string;
+//   questions: string[];
+// };
+
+// type Evaluation = {
+//   score: number;
+//   strengths: string[];
+//   missingPoints: string[];
+//   feedback: string;
+//   suggestedAnswer: string;
+// };
+
+// type QuestionResult = {
+//   answer: string;
+//   evaluation: Evaluation | null;
+// };
+
+// const API_URL = "http://127.0.0.1:8000";
+
+// export default function MockInterview() {
+//   const [config, setConfig] = useState<InterviewConfig | null>(null);
+//   const [questions, setQuestions] = useState<string[]>([]);
+//   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+
+//   const [loading, setLoading] = useState(false);
+//   const [error, setError] = useState("");
+
+//   const [showResults, setShowResults] = useState(false);
+//   const [results, setResults] = useState<Record<number, QuestionResult>>({});
+
+//   // Day 86: Session saving
+//   const [savingSession, setSavingSession] = useState(false);
+//   const [sessionError, setSessionError] = useState("");
+ 
+//   const [sessionId, setSessionId] = useState<number | null>(null);
+
+//   // Prevent duplicate API requests
+//   const savingRef = useRef(false);
+
+//   async function handleStart(selectedConfig: InterviewConfig) {
+//     setConfig(selectedConfig);
+//     setLoading(true);
+//     setError("");
+//     setQuestions([]);
+//     setCurrentQuestionIndex(0);
+//     setResults({});
+//     setShowResults(false);
+//     setSessionError("");
+//     setSavedSessionId(null);
+//     savingRef.current = false;
+
+//     try {
+//       const requestBody = {
+//         jobRole: selectedConfig.jobRole,
+//         experience: selectedConfig.experience,
+//         difficulty: "medium",
+//         numberOfQuestions: selectedConfig.questionCount,
+//         topics: selectedConfig.jobRole,
+//         questionType: "Mixed",
+//       };
+
+//       const response = await fetch(`${API_URL}/generate-questions`, {
+//         method: "POST",
+//         headers: {
+//           "Content-Type": "application/json",
+//         },
+//         body: JSON.stringify(requestBody),
+//       });
+
+//       if (!response.ok) {
+//         const errorData = await response.json().catch(() => null);
+
+//         throw new Error(
+//           typeof errorData?.detail === "string"
+//             ? errorData.detail
+//             : "Failed to generate interview questions"
+//         );
+//       }
+
+//       const result: GenerateQuestionsResponse = await response.json();
+
+//       if (
+//         !Array.isArray(result.questions) ||
+//         result.questions.length !== selectedConfig.questionCount ||
+//         !result.questions.every(
+//           (question) => typeof question === "string"
+//         )
+//       ) {
+//         throw new Error("Invalid questions received from server");
+//       }
+
+//       setQuestions(result.questions);
+
+
+// const sessionResponse = await fetch(
+//   "http://127.0.0.1:8000/sessions",
+//   {
+//     method: "POST",
+//     headers: {
+//       "Content-Type": "application/json",
+//     },
+//     body: JSON.stringify({
+//       jobRole: selectedConfig.jobRole,
+//       experience: selectedConfig.experience,
+//       totalQuestions: result.questions.length,
+//       averageScore: 0,
+//     }),
+//   }
+// );
+
+// if (!sessionResponse.ok) {
+//   throw new Error("Failed to create interview session");
+// }
+
+// const sessionData: { sessionId: number } =
+//   await sessionResponse.json();
+
+// setSessionId(sessionData.sessionId);
+
+//     } catch (err) {
+//       setError(
+//         err instanceof Error ? err.message : "Something went wrong"
+//       );
+//     } finally {
+//       setLoading(false);
+//     }
+//   }
+
+//   function handleNext() {
+//     if (currentQuestionIndex < questions.length - 1) {
+//       setCurrentQuestionIndex((prev) => prev + 1);
+//     }
+//   }
+
+//   function handlePrevious() {
+//     if (currentQuestionIndex > 0) {
+//       setCurrentQuestionIndex((prev) => prev - 1);
+//     }
+//   }
+
+//   function handleReset() {
+//     if (savingRef.current) return;
+
+//     setConfig(null);
+//     setQuestions([]);
+//     setCurrentQuestionIndex(0);
+//     setError("");
+//     setResults({});
+//     setShowResults(false);
+//     setSavingSession(false);
+//     setSessionError("");
+//   setSessionId(null);
+//   }
+
+//   // Day 86: Save completed interview session
+//   async function handleFinishInterview() {
+//     if (!config || savingRef.current) return;
+
+//     const completed =
+//       questions.length > 0 &&
+//       questions.every(
+//         (_, index) => results[index]?.evaluation != null
+//       );
+
+//     if (!completed) {
+//       setSessionError("Please complete all questions first.");
+//       return;
+//     }
+
+//     // If already saved, don't create another session
+//     if (savedSessionId !== null) {
+//       setShowResults(true);
+//       return;
+//     }
+
+//     const totalScore = questions.reduce(
+//       (sum, _, index) =>
+//         sum + (results[index]?.evaluation?.score ?? 0),
+//       0
+//     );
+
+//     const averageScore = totalScore / questions.length;
+
+//     console.log("Interview Results:", results);
+// console.log("Total Score:", totalScore);
+// console.log("Average Score:", averageScore);
+
+//     savingRef.current = true;
+//     setSavingSession(true);
+//     setSessionError("");
+
+//     try {
+//       const response = await fetch(`${API_URL}/sessions`, {
+//         method: "POST",
+//         headers: {
+//           "Content-Type": "application/json",
+//         },
+//         body: JSON.stringify({
+//           jobRole: config.jobRole,
+//           experience: config.experience,
+//           totalQuestions: questions.length,
+//           averageScore: Number(averageScore.toFixed(2)),
+//         }),
+//       });
+
+//       if (!response.ok) {
+//         throw new Error("Failed to save interview session");
+//       }
+
+//       const data: { sessionId: number } = await response.json();
+
+//       setSavedSessionId(data.sessionId);
+//       setShowResults(true);
+//     } catch (err) {
+//       setSessionError(
+//         err instanceof Error
+//           ? err.message
+//           : "Unable to save interview session"
+//       );
+//     } finally {
+//       savingRef.current = false;
+//       setSavingSession(false);
+//     }
+//   }
+
+//   const currentQuestion = questions[currentQuestionIndex];
+
+//   return (
+//     <div className="min-h-screen bg-[#080D1B] p-6 text-white md:p-8">
+//       <div className="mx-auto max-w-5xl">
+//         {/* Page Heading */}
+//         <div className="mb-8 flex items-center gap-3">
+//           <div className="rounded-xl bg-indigo-500/15 p-3">
+//             <BrainCircuit
+//               size={26}
+//               className="text-indigo-400"
+//             />
+//           </div>
+
+//           <div>
+//             <h1 className="text-3xl font-bold">
+//               AI Mock Interview
+//             </h1>
+//             <p className="mt-1 text-sm text-slate-400">
+//               Practice real interview questions with AI.
+//             </p>
+//           </div>
+//         </div>
+
+//         {/* Setup Form */}
+//         {!config && <InterviewSetup onStart={handleStart} />}
+
+//         {/* Loading */}
+//         {loading && (
+//           <div className="flex min-h-80 flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#111A2E] p-8">
+//             <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-500/10">
+//               <Sparkles
+//                 size={26}
+//                 className="animate-pulse text-indigo-400"
+//               />
+//             </div>
+
+//             <div className="mb-5 h-9 w-9 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+
+//             <h2 className="text-xl font-semibold">
+//               Preparing Your Interview
+//             </h2>
+
+//             <p className="mt-3 text-center text-sm text-slate-400">
+//               Gemini AI is generating personalized interview
+//               questions for you.
+//             </p>
+//           </div>
+//         )}
+
+//         {/* Error */}
+//         {!loading && error && config && (
+//           <div className="rounded-2xl border border-red-500/20 bg-[#111A2E] p-8">
+//             <div className="flex items-start gap-3">
+//               <AlertCircle
+//                 size={24}
+//                 className="shrink-0 text-red-400"
+//               />
+
+//               <div>
+//                 <h2 className="text-lg font-semibold">
+//                   Unable to Start Interview
+//                 </h2>
+//                 <p className="mt-2 text-sm text-red-300">
+//                   {error}
+//                 </p>
+//               </div>
+//             </div>
+
+//             <div className="mt-6 flex flex-wrap gap-3">
+//               <button
+//                 type="button"
+//                 onClick={() => handleStart(config)}
+//                 className="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-medium hover:bg-indigo-500"
+//               >
+//                 Try Again
+//               </button>
+
+//               <button
+//                 type="button"
+//                 onClick={handleReset}
+//                 className="rounded-xl border border-white/10 px-5 py-3 text-sm text-slate-300 hover:bg-white/5"
+//               >
+//                 Back to Setup
+//               </button>
+//             </div>
+//           </div>
+//         )}
+
+//         {/* Interview Questions */}
+//         {!loading &&
+//           !error &&
+//           config &&
+//           questions.length > 0 &&
+//           !showResults && (
+//             <div className="space-y-6">
+//               {/* Interview Info */}
+//               <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#111A2E] p-5">
+//                 <div>
+//                   <p className="text-sm font-semibold text-white">
+//                     {config.jobRole}
+//                   </p>
+
+//                   <p className="mt-1 text-xs text-slate-400">
+//                     {config.experience} Experience
+//                   </p>
+//                 </div>
+
+//                 <button
+//                   type="button"
+//                   onClick={handleReset}
+//                   disabled={savingSession}
+//                   className="flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm text-slate-300 transition hover:bg-white/5 disabled:opacity-40"
+//                 >
+//                   <RotateCcw size={16} />
+//                   New Interview
+//                 </button>
+//               </div>
+
+//               {/* Question Card */}
+//               <InterviewQuestion
+//                 key={currentQuestionIndex}
+//                 question={currentQuestion}
+//                 questionNumber={currentQuestionIndex + 1}
+//                 totalQuestions={questions.length}
+//                 jobRole={config.jobRole}
+//                 experience={config.experience}
+//                 onPrevious={handlePrevious}
+//                 onNext={handleNext}
+//                 isFirst={currentQuestionIndex === 0}
+//                 isLast={
+//                   currentQuestionIndex === questions.length - 1
+//                 }
+//                 savedResult={results[currentQuestionIndex]}
+//                 onAnswerSaved={(result) => {
+//                   setResults((prev) => ({
+//                     ...prev,
+//                     [currentQuestionIndex]: result,
+//                   }));
+//                 }}
+//                 onFinish={handleFinishInterview}
+//                 isFinishing={savingSession}
+//               />
+
+//               {/* Session Error */}
+//               {sessionError && (
+//                 <div
+//                   role="alert"
+//                   className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-300"
+//                 >
+//                   <AlertCircle size={18} />
+//                   {sessionError}
+//                 </div>
+//               )}
+//             </div>
+//           )}
+
+//         {/* Final Interview Results */}
+//         {!loading &&
+//           !error &&
+//           config &&
+//           showResults &&
+//           questions.length > 0 && (
+//             <InterviewResults
+//               jobRole={config.jobRole}
+//               experience={config.experience}
+//               questions={questions}
+//               results={results}
+//               onRestart={handleReset}
+//             />
+//           )}
+//       </div>
+//     </div>
+//   );
+// }
+
+
+
+import { useRef, useState } from "react";
+import {
+  BrainCircuit,
+  Sparkles,
+  AlertCircle,
+  RotateCcw,
+} from "lucide-react";
 
 import InterviewSetup from "../components/Interview/InterviewSetup";
-
 import type { InterviewConfig } from "../components/Interview/InterviewSetup";
 import InterviewQuestion from "../components/Interview/InterviewQuestion";
 import InterviewResults from "../components/Interview/InterviewResults";
@@ -12,9 +434,34 @@ type GenerateQuestionsResponse = {
   questions: string[];
 };
 
+type Evaluation = {
+  score: number;
+  strengths: string[];
+  missingPoints: string[];
+  feedback: string;
+  suggestedAnswer: string;
+};
+
+type QuestionResult = {
+  answer: string;
+  evaluation: Evaluation | null;
+};
+
+type SessionResponse = {
+  sessionId: number;
+};
+
+type CompleteSessionResponse = {
+  message: string;
+  sessionId: number;
+  totalQuestions: number;
+  averageScore: number;
+};
+
+const API_URL = "http://127.0.0.1:8000";
+
 export default function MockInterview() {
   const [config, setConfig] = useState<InterviewConfig | null>(null);
-
   const [questions, setQuestions] = useState<string[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
@@ -23,22 +470,23 @@ export default function MockInterview() {
 
   const [showResults, setShowResults] = useState(false);
   const [results, setResults] = useState<
-    Record<
-      number,
-      {
-        answer: string;
-        evaluation: {
-          score: number;
-          strengths: string[];
-          missingPoints: string[];
-          feedback: string;
-          suggestedAnswer: string;
-        } | null;
-      }
-    >
+    Record<number, QuestionResult>
   >({});
-  // Generate questions using Gemini AI
+
+  // Day 86: Interview session management
+  const [sessionId, setSessionId] = useState<number | null>(null);
+  const [savingSession, setSavingSession] = useState(false);
+  const [sessionError, setSessionError] = useState("");
+
+  // Prevent duplicate finish requests
+  const savingRef = useRef(false);
+  const startingRef = useRef(false);
+
   async function handleStart(selectedConfig: InterviewConfig) {
+    if (startingRef.current || savingRef.current) return;
+
+    startingRef.current = true;
+
     setConfig(selectedConfig);
     setLoading(true);
     setError("");
@@ -46,8 +494,11 @@ export default function MockInterview() {
     setCurrentQuestionIndex(0);
     setResults({});
     setShowResults(false);
+    setSessionError("");
+    setSessionId(null);
 
     try {
+      // Step 1: Generate questions using Gemini
       const requestBody = {
         jobRole: selectedConfig.jobRole,
         experience: selectedConfig.experience,
@@ -57,13 +508,16 @@ export default function MockInterview() {
         questionType: "Mixed",
       };
 
-      const response = await fetch("http://127.0.0.1:8000/generate-questions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-      });
+      const response = await fetch(
+        `${API_URL}/generate-questions`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
@@ -71,24 +525,82 @@ export default function MockInterview() {
         throw new Error(
           typeof errorData?.detail === "string"
             ? errorData.detail
-            : "Failed to generate interview questions",
+            : "Failed to generate interview questions"
         );
       }
 
-      const result: GenerateQuestionsResponse = await response.json();
+      const result: GenerateQuestionsResponse =
+        await response.json();
 
       if (
         !Array.isArray(result.questions) ||
         result.questions.length !== selectedConfig.questionCount ||
-        !result.questions.every((question) => typeof question === "string")
+        !result.questions.every(
+          (question) =>
+            typeof question === "string" &&
+            question.trim().length > 0
+        )
       ) {
-        throw new Error("Invalid questions received from server");
+        throw new Error(
+          "Invalid questions received from server"
+        );
       }
 
+      // Step 2: Create interview session
+      const sessionResponse = await fetch(
+        `${API_URL}/sessions`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            jobRole: selectedConfig.jobRole,
+            experience: selectedConfig.experience,
+            totalQuestions: result.questions.length,
+            averageScore: 0,
+          }),
+        }
+      );
+
+      if (!sessionResponse.ok) {
+        const errorData = await sessionResponse
+          .json()
+          .catch(() => null);
+
+        throw new Error(
+          typeof errorData?.detail === "string"
+            ? errorData.detail
+            : "Failed to create interview session"
+        );
+      }
+
+      const sessionData: SessionResponse =
+        await sessionResponse.json();
+
+      if (
+        !Number.isInteger(sessionData.sessionId) ||
+        sessionData.sessionId <= 0
+      ) {
+        throw new Error("Invalid session ID received");
+      }
+
+      // Step 3: Show questions only after session creation
+      setSessionId(sessionData.sessionId);
       setQuestions(result.questions);
+
+      console.log(
+        "Interview session created:",
+        sessionData.sessionId
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong"
+      );
     } finally {
+      startingRef.current = false;
       setLoading(false);
     }
   }
@@ -106,12 +618,92 @@ export default function MockInterview() {
   }
 
   function handleReset() {
+    if (savingRef.current || startingRef.current) return;
+
     setConfig(null);
     setQuestions([]);
     setCurrentQuestionIndex(0);
+    setLoading(false);
     setError("");
     setResults({});
     setShowResults(false);
+    setSavingSession(false);
+    setSessionError("");
+    setSessionId(null);
+
+    savingRef.current = false;
+  }
+
+  // Day 86: Complete existing interview session
+  async function handleFinishInterview() {
+    if (
+      !config ||
+      sessionId === null ||
+      savingRef.current ||
+      showResults
+    ) {
+      return;
+    }
+
+    const completed =
+      questions.length > 0 &&
+      questions.every(
+        (_, index) =>
+          results[index]?.evaluation != null
+      );
+
+    if (!completed) {
+      setSessionError(
+        "Please complete all questions first."
+      );
+      return;
+    }
+
+    savingRef.current = true;
+    setSavingSession(true);
+    setSessionError("");
+
+    try {
+      // Complete the existing session
+      const response = await fetch(
+        `${API_URL}/sessions/${sessionId}/complete`,
+        {
+          method: "PATCH",
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => null);
+
+        throw new Error(
+          typeof errorData?.detail === "string"
+            ? errorData.detail
+            : "Failed to complete interview session"
+        );
+      }
+
+      const data: CompleteSessionResponse =
+        await response.json();
+
+      console.log("Interview completed:", data);
+      console.log(
+        "Final average score:",
+        data.averageScore
+      );
+
+      setShowResults(true);
+    } catch (err) {
+      setSessionError(
+        err instanceof Error
+          ? err.message
+          : "Unable to complete interview session"
+      );
+    } finally {
+      savingRef.current = false;
+      setSavingSession(false);
+    }
   }
 
   const currentQuestion = questions[currentQuestionIndex];
@@ -122,12 +714,16 @@ export default function MockInterview() {
         {/* Page Heading */}
         <div className="mb-8 flex items-center gap-3">
           <div className="rounded-xl bg-indigo-500/15 p-3">
-            <BrainCircuit size={26} className="text-indigo-400" />
+            <BrainCircuit
+              size={26}
+              className="text-indigo-400"
+            />
           </div>
 
           <div>
-            <h1 className="text-3xl font-bold">AI Mock Interview</h1>
-
+            <h1 className="text-3xl font-bold">
+              AI Mock Interview
+            </h1>
             <p className="mt-1 text-sm text-slate-400">
               Practice real interview questions with AI.
             </p>
@@ -135,21 +731,29 @@ export default function MockInterview() {
         </div>
 
         {/* Setup Form */}
-        {!config && <InterviewSetup onStart={handleStart} />}
+        {!config && (
+          <InterviewSetup onStart={handleStart} />
+        )}
 
         {/* Loading */}
         {loading && (
           <div className="flex min-h-80 flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#111A2E] p-8">
             <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-500/10">
-              <Sparkles size={26} className="animate-pulse text-indigo-400" />
+              <Sparkles
+                size={26}
+                className="animate-pulse text-indigo-400"
+              />
             </div>
 
             <div className="mb-5 h-9 w-9 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
 
-            <h2 className="text-xl font-semibold">Preparing Your Interview</h2>
+            <h2 className="text-xl font-semibold">
+              Preparing Your Interview
+            </h2>
 
             <p className="mt-3 text-center text-sm text-slate-400">
-              Gemini AI is generating personalized interview questions for you.
+              Gemini AI is generating personalized interview
+              questions for you.
             </p>
           </div>
         )}
@@ -158,14 +762,18 @@ export default function MockInterview() {
         {!loading && error && config && (
           <div className="rounded-2xl border border-red-500/20 bg-[#111A2E] p-8">
             <div className="flex items-start gap-3">
-              <AlertCircle size={24} className="shrink-0 text-red-400" />
+              <AlertCircle
+                size={24}
+                className="shrink-0 text-red-400"
+              />
 
               <div>
                 <h2 className="text-lg font-semibold">
                   Unable to Start Interview
                 </h2>
-
-                <p className="mt-2 text-sm text-red-300">{error}</p>
+                <p className="mt-2 text-sm text-red-300">
+                  {error}
+                </p>
               </div>
             </div>
 
@@ -193,6 +801,7 @@ export default function MockInterview() {
         {!loading &&
           !error &&
           config &&
+          sessionId !== null &&
           questions.length > 0 &&
           !showResults && (
             <div className="space-y-6">
@@ -206,12 +815,17 @@ export default function MockInterview() {
                   <p className="mt-1 text-xs text-slate-400">
                     {config.experience} Experience
                   </p>
+
+                  <p className="mt-1 text-xs text-indigo-400">
+                    Session #{sessionId}
+                  </p>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleReset}
-                  className="flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm text-slate-300 transition hover:bg-white/5"
+                  disabled={savingSession}
+                  className="flex items-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm text-slate-300 transition hover:bg-white/5 disabled:opacity-40"
                 >
                   <RotateCcw size={16} />
                   New Interview
@@ -219,9 +833,9 @@ export default function MockInterview() {
               </div>
 
               {/* Question Card */}
-
               <InterviewQuestion
                 key={currentQuestionIndex}
+                sessionId={sessionId}
                 question={currentQuestion}
                 questionNumber={currentQuestionIndex + 1}
                 totalQuestions={questions.length}
@@ -230,27 +844,33 @@ export default function MockInterview() {
                 onPrevious={handlePrevious}
                 onNext={handleNext}
                 isFirst={currentQuestionIndex === 0}
-                isLast={currentQuestionIndex === questions.length - 1}
-                savedResult={results[currentQuestionIndex]}
+                isLast={
+                  currentQuestionIndex ===
+                  questions.length - 1
+                }
+                savedResult={
+                  results[currentQuestionIndex]
+                }
                 onAnswerSaved={(result) => {
                   setResults((prev) => ({
                     ...prev,
                     [currentQuestionIndex]: result,
                   }));
                 }}
-                onFinish={() => {
-                  const completed = questions.every(
-                    (_, index) =>
-                      results[index]?.evaluation !== null &&
-                      results[index]?.evaluation !== undefined,
-                  );
-
-                  if (completed) {
-                    setShowResults(true);
-                  }
-                }}
-          
+                onFinish={handleFinishInterview}
+                isFinishing={savingSession}
               />
+
+              {/* Session Error */}
+              {sessionError && (
+                <div
+                  role="alert"
+                  className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-300"
+                >
+                  <AlertCircle size={18} />
+                  {sessionError}
+                </div>
+              )}
             </div>
           )}
 
@@ -266,9 +886,9 @@ export default function MockInterview() {
               questions={questions}
               results={results}
               onRestart={handleReset}
+              sessionId={sessionId}
             />
           )}
-
       </div>
     </div>
   );
