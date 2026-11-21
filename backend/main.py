@@ -5,7 +5,7 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from database import get_db
 from models import ResumeChunk
-
+from typing import Optional
 from rag_service import generate_resume_questions
 
 import os
@@ -69,7 +69,8 @@ class SaveAttemptRequest(AnswerEvaluationResponse):
     answer: str = Field(min_length=1)
     jobRole: str = Field(min_length=1)
     experience: str = Field(min_length=1)
-    sessionId: int | None = None
+    # sessionId: int | None = None
+    sessionId: Optional[int] = None
 
 
 class SaveSessionRequest(BaseModel):

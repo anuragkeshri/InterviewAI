@@ -1,9 +1,6 @@
 
-from sqlalchemy import Column, Integer, String, Text
-from database import Base
-
-
 from datetime import datetime, timezone
+from typing import Optional
 
 from sqlalchemy import (
     Column,
@@ -17,8 +14,13 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
+
 from database import Base
 
+
+# ==========================================
+# 1. INTERVIEW ATTEMPT
+# ==========================================
 
 class InterviewAttempt(Base):
     __tablename__ = "interview_attempts"
@@ -29,8 +31,7 @@ class InterviewAttempt(Base):
         autoincrement=True
     )
 
-    # Link attempt to interview session
-    session_id: Mapped[int | None] = mapped_column(
+    session_id: Mapped[Optional[int]] = mapped_column(
         Integer,
         ForeignKey("interview_sessions.id"),
         nullable=True,
@@ -89,6 +90,10 @@ class InterviewAttempt(Base):
     )
 
 
+# ==========================================
+# 2. INTERVIEW SESSION
+# ==========================================
+
 class InterviewSession(Base):
     __tablename__ = "interview_sessions"
 
@@ -122,17 +127,43 @@ class InterviewSession(Base):
         DateTime,
         server_default=func.now()
     )
+
+
+# ==========================================
+# 3. RESUME CHUNKS
+# ==========================================
+
 class ResumeChunk(Base):
     __tablename__ = "resume_chunks"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
 
-    resume_id = Column(String(100), nullable=False, index=True)
+    resume_id = Column(
+        String(100),
+        nullable=False,
+        index=True
+    )
 
-    chunk_index = Column(Integer, nullable=False)
+    chunk_index = Column(
+        Integer,
+        nullable=False
+    )
 
-    chunk_text = Column(Text, nullable=False)
+    chunk_text = Column(
+        Text,
+        nullable=False
+    )
 
-    embedding = Column(Text, nullable=False)
+    embedding = Column(
+        Text,
+        nullable=False
+    )
 
-    filename = Column(String(255), nullable=False)
+    filename = Column(
+        String(255),
+        nullable=False
+    )
