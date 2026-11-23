@@ -17,6 +17,12 @@ export default function ResumeUpload({ onUpload }: ResumeUploadProps) {
   const [generating, setGenerating] = useState(false);
   const [questions, setQuestions] = useState<string[]>([]);
   const [sessionId, setSessionId] = useState<number | null>(null);
+  const [questionScores, setQuestionScores] = useState<Record<number, number>>(
+    {},
+  );
+  const [interviewFinished, setInterviewFinished] = useState(false);
+  const [finishing, setFinishing] = useState(false);
+  const [finalScore, setFinalScore] = useState<number | null>(null);
 
   const handleFile = (selected: File | undefined) => {
     if (!selected) return;
@@ -38,6 +44,9 @@ export default function ResumeUpload({ onUpload }: ResumeUploadProps) {
     setUploadSuccess(false);
     setResumeId(null);
     setQuestions([]);
+    setQuestionScores({});
+    setInterviewFinished(false);
+    setFinalScore(null);
     setFile(selected);
     onUpload(selected);
     setSessionId(null);
@@ -77,12 +86,21 @@ export default function ResumeUpload({ onUpload }: ResumeUploadProps) {
     }
   };
 
+  const handleEvaluationSaved = (questionIndex: number, score: number) => {
+    setQuestionScores((prev) => ({
+      ...prev,
+      [questionIndex]: score,
+    }));
+  };
+
   const generateQuestions = async () => {
     if (!resumeId || !jobRole.trim() || generating) return;
 
     setGenerating(true);
     setError("");
     setQuestions([]);
+    setQuestionScores({});
+    setInterviewFinished(false);
     setSessionId(null);
 
     try {
@@ -110,35 +128,30 @@ export default function ResumeUpload({ onUpload }: ResumeUploadProps) {
         .map((q: string) => q.replace(/^\d+\.\s*/, "").trim())
         .filter(Boolean);
 
-     
-// Create interview session
-const sessionResponse = await fetch(
-  "http://127.0.0.1:8000/sessions",
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      jobRole: jobRole.trim(),
-      experience: "3-4 years",
-      totalQuestions: parsedQuestions.length,
-      averageScore: 0,
-    }),
-  }
-);
+      // Create interview session
+      const sessionResponse = await fetch("http://127.0.0.1:8000/sessions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jobRole: jobRole.trim(),
+          experience: "3-4 years",
+          totalQuestions: parsedQuestions.length,
+          averageScore: 0,
+        }),
+      });
 
-if (!sessionResponse.ok) {
-  throw new Error("Failed to create interview session");
-}
+      if (!sessionResponse.ok) {
+        throw new Error("Failed to create interview session");
+      }
 
-const sessionData = await sessionResponse.json();
+      const sessionData = await sessionResponse.json();
 
-setSessionId(sessionData.sessionId);
-setQuestions(parsedQuestions);
+      setSessionId(sessionData.sessionId);
+      setQuestions(parsedQuestions);
 
-console.log("Session created:", sessionData.sessionId);
-
+      console.log("Session created:", sessionData.sessionId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -146,6 +159,64 @@ console.log("Session created:", sessionData.sessionId);
     }
   };
 
+  const completedQuestions = Object.keys(questionScores).length;
+
+  const totalQuestions = questions.length;
+
+  const averageScore =
+    completedQuestions > 0
+      ? Object.values(questionScores).reduce((sum, score) => sum + score, 0) /
+        completedQuestions
+      : 0;
+  // const finishInterview = () => {
+  //   if (completedQuestions !== totalQuestions || totalQuestions === 0) {
+  //     setError("Please complete all interview questions first.");
+  //     return;
+  //   }
+
+  //   setError("");
+  //   setInterviewFinished(true);
+  // };
+
+  const finishInterview = async () => {
+    if (completedQuestions !== totalQuestions || totalQuestions === 0) {
+      setError("Please complete all interview questions first.");
+      return;
+    }
+
+    if (sessionId === null || finishing) return;
+
+    setFinishing(true);
+    setError("");
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/sessions/${sessionId}/finish`,
+        {
+          method: "PATCH",
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          typeof data.detail === "string"
+            ? data.detail
+            : "Failed to finish interview",
+        );
+      }
+
+      console.log("Interview finished:", data);
+
+      setFinalScore(data.averageScore);
+      setInterviewFinished(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setFinishing(false);
+    }
+  };
   return (
     <div className="w-full  rounded-2xl border border-white/10 bg-slate-900 p-6 text-white shadow-xl">
       <h2 className="text-xl font-semibold">Upload Your Resume</h2>
@@ -302,21 +373,96 @@ console.log("Session created:", sessionData.sessionId);
                   Practice answering questions based on your resume.
                 </p>
               </div>
+              <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/10 p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-300">
+                    Interview Progress
+                  </span>
 
-              {questions.map((question, index) => (
-                <ResumeQuestionCard
-                  key={`${resumeId}-${index}`}
-                  question={question}
-                  index={index}
-                  jobRole={jobRole}
-                  sessionId={sessionId}
-                />
-              ))}
+                  <span className="text-sm font-semibold text-indigo-400">
+                    {completedQuestions}/{totalQuestions} Completed
+                  </span>
+                </div>
+
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800">
+                  <div
+                    className="h-full rounded-full bg-indigo-500 transition-all duration-300"
+                    style={{
+                      width: `${
+                        totalQuestions > 0
+                          ? (completedQuestions / totalQuestions) * 100
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+
+                <p className="mt-3 text-xs text-slate-400">
+                  Current Average Score: {averageScore.toFixed(1)}/10
+                </p>
+              </div>
+              {!interviewFinished &&
+                questions.map((question, index) => (
+                  <ResumeQuestionCard
+                    key={`${resumeId}-${index}`}
+                    question={question}
+                    index={index}
+                    jobRole={jobRole}
+                    sessionId={sessionId}
+                    onEvaluationSaved={handleEvaluationSaved}
+                  />
+                ))}
             </div>
+          )}
+          {!interviewFinished && (
+            <button
+              type="button"
+              onClick={finishInterview}
+              disabled={
+                finishing ||
+                sessionId === null ||
+                completedQuestions !== totalQuestions
+              }
+              className="mt-6 w-full rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {finishing ? "Finishing Interview..." : "Finish Interview"}
+            </button>
           )}
         </div>
       )}
+      {interviewFinished && (
+        <div className="mt-8 rounded-2xl border border-indigo-500/30 bg-slate-950 p-6 text-center">
+          <div className="mb-3 text-4xl">🎉</div>
 
+          <h3 className="text-2xl font-bold text-white">
+            Interview Completed!
+          </h3>
+
+          <p className="mt-2 text-sm text-slate-400">
+            Great job completing your AI-powered interview.
+          </p>
+
+          <div className="mt-6 grid grid-cols-2 gap-4">
+            <div className="rounded-xl bg-slate-900 p-5">
+              <p className="text-sm text-slate-400">Questions Completed</p>
+              <p className="mt-2 text-3xl font-bold text-white">
+                {completedQuestions}/{totalQuestions}
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-slate-900 p-5">
+              <p className="text-sm text-slate-400">Average Score</p>
+              <p className="mt-2 text-3xl font-bold text-indigo-400">
+            {finalScore !== null ? finalScore.toFixed(1) : averageScore.toFixed(1)}/10
+              </p>
+            </div>
+          </div>
+
+          <p className="mt-6 text-sm text-emerald-400">
+            Your interview results are ready!
+          </p>
+        </div>
+      )}
       {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
     </div>
   );

@@ -472,10 +472,11 @@ def get_attempts(db: Session = Depends(get_db)):
 # 11. DASHBOARD STATS
 # ==========================================
 
+
 @app.get("/dashboard/stats")
-def get_dashboard_stats(
-    db: Session = Depends(get_db)
-):
+def get_dashboard_stats(db: Session = Depends(get_db)):
+
+    # Question-wise statistics
     total_attempts = db.scalar(
         select(func.count(InterviewAttempt.id))
     ) or 0
@@ -488,10 +489,55 @@ def get_dashboard_stats(
         select(func.max(InterviewAttempt.score))
     ) or 0
 
+    # Interview session statistics
+    total_interviews = db.scalar(
+        select(func.count(InterviewSession.id))
+    ) or 0
+
+    # Sessions with all unique questions evaluated
+    completed_sessions = db.scalars(
+        select(InterviewSession)
+    ).all()
+
+    completed_scores = []
+
+    for interview_session in completed_sessions:
+        unique_questions = db.scalar(
+            select(
+                func.count(
+                    func.distinct(InterviewAttempt.question)
+                )
+            ).where(
+                InterviewAttempt.session_id == interview_session.id
+            )
+        ) or 0
+
+        if (
+            interview_session.total_questions > 0
+            and unique_questions == interview_session.total_questions
+        ):
+            completed_scores.append(
+                interview_session.average_score
+            )
+
+    completed_interviews = len(completed_scores)
+
+    average_interview_score = (
+        round(
+            sum(completed_scores) / completed_interviews,
+            1
+        )
+        if completed_interviews > 0
+        else 0
+    )
+
     return {
         "totalAttempts": total_attempts,
         "averageScore": round(float(average_score), 1),
-        "bestScore": best_score
+        "bestScore": best_score,
+        "totalInterviews": total_interviews,
+        "completedInterviews": completed_interviews,
+        "averageInterviewScore": average_interview_score
     }
 
 
@@ -546,6 +592,103 @@ def save_interview_session(
         "message": "Interview session created",
         "sessionId": session.id
     }
+
+@app.patch("/sessions/{session_id}/finish")
+def finish_interview_session(
+    session_id: int,
+    db: Session = Depends(get_db)
+):
+    # Step 1: Find interview session
+    interview_session = db.get(InterviewSession, session_id)
+
+    if not interview_session:
+        raise HTTPException(
+            status_code=404,
+            detail="Interview session not found"
+        )
+
+    # Step 2: Get saved answers for this session
+    attempts = db.scalars(
+        select(InterviewAttempt).where(
+            InterviewAttempt.session_id == session_id
+        ).order_by(InterviewAttempt.id.desc())
+    ).all()
+
+    if not attempts:
+        raise HTTPException(
+            status_code=400,
+            detail="No evaluated answers found"
+        )
+
+    # Step 3: Calculate average score
+    # Use the latest saved attempt for each question
+    latest_attempts = {}
+
+    for attempt in attempts:
+        if attempt.question not in latest_attempts:
+            latest_attempts[attempt.question] = attempt
+
+    completed_questions = len(latest_attempts)
+
+    if completed_questions != interview_session.total_questions:
+        raise HTTPException(
+            status_code=400,
+            detail="Please complete all interview questions first"
+        )
+
+    average_score = round(
+        sum(attempt.score for attempt in latest_attempts.values())
+        / completed_questions,
+        2
+    )
+
+    # Step 4: Update session
+    interview_session.average_score = average_score
+
+    db.commit()
+    db.refresh(interview_session)
+
+    return {
+        "message": "Interview completed successfully",
+        "sessionId": interview_session.id,
+        "totalQuestions": interview_session.total_questions,
+        "completedQuestions": completed_questions,
+        "averageScore": interview_session.average_score
+    }
+
+@app.get("/sessions/{session_id}/debug")
+def debug_interview_session(
+    session_id: int,
+    db: Session = Depends(get_db)
+):
+    session = db.get(InterviewSession, session_id)
+
+    if not session:
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found"
+        )
+
+    attempts = db.scalars(
+        select(InterviewAttempt).where(
+            InterviewAttempt.session_id == session_id
+        )
+    ).all()
+
+    return {
+        "sessionId": session.id,
+        "totalQuestions": session.total_questions,
+        "savedAttempts": len(attempts),
+        "uniqueQuestions": len(set(a.question for a in attempts)),
+        "questions": [
+            {
+                "question": a.question,
+                "score": a.score
+            }
+            for a in attempts
+        ]
+    }
+
 
 
 # ==========================================

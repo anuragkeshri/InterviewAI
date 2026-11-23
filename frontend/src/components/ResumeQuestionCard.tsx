@@ -6,6 +6,7 @@ type Props = {
   index: number;
   jobRole: string;
   sessionId: number | null;
+  onEvaluationSaved: (index: number, score: number) => void;
 };
 
 export default function ResumeQuestionCard({
@@ -13,6 +14,7 @@ export default function ResumeQuestionCard({
   index,
   jobRole,
    sessionId,
+   onEvaluationSaved,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [answer, setAnswer] = useState("");
@@ -96,7 +98,7 @@ if (!saveResponse.ok) {
 const savedAttempt = await saveResponse.json();
 
 console.log("Saved attempt:", savedAttempt);
-
+onEvaluationSaved(index, result.score);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

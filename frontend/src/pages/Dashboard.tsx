@@ -13,12 +13,18 @@ function Dashboard() {
     totalAttempts: number;
     averageScore: number;
     bestScore: number;
+    totalInterviews: number;
+    completedInterviews: number;
+    averageInterviewScore: number;
   };
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
     totalAttempts: 0,
     averageScore: 0,
     bestScore: 0,
+    totalInterviews: 0,
+    completedInterviews: 0,
+    averageInterviewScore: 0,
   });
 
   useEffect(() => {
